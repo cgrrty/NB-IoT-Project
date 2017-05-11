@@ -92,7 +92,7 @@
 #include <conf_usart_example.h>
 #include <asf.h>
 #include <string.h>
-
+#include <sim900_at_commands.h>
 /*
 	TODO:
 	- integrate response into tx function?
@@ -102,22 +102,6 @@
 
 //status
 uint8_t STATUS = 0;
-
-//define AT SMS commands
-#define CR "\r"
-#define AT "AT\r"
-#define AT_CMGF "AT+CMGF=1\r"
-#define AT_CMGS "AT+CMGS=\"+4798480520\"\r"
-#define AT_MESSAGE "SIM900 Lillebakk SMS\r"
-#define CTRL_Z "\x1a"
-
-//define AT GPRS commands
-#define AT_CGATT "AT+CGATT=<1>"
-
-//define AT commands' response
-#define RESPONSE_HEADER "\r\n"
-#define RESPONSE_FOOTER "\r\n"
-#define RESPONSE_OK "OK"
 
 //Functions declarations
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
@@ -241,6 +225,45 @@ int main(void)
 	usart_init_rs232(USART_SERIAL_EXAMPLE, &USART_SERIAL_OPTIONS);
 	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_SIM900_OPTIONS);
 
+
+
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT);
+	delay_s(1);
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTATUS);
+	delay_s(1);
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIPMUX);
+	delay_s(1);
+	
+	i = 0;
+	while (i < LEN_CSTT)
+	{
+		usart_tx_at(USART_SERIAL_SIM900, AT_CSTT[i]);
+		i++;
+	}
+	delay_s(1);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIICR);
+	delay_s(3);
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIFSR);
+	delay_s(1);
+	
+	i = 0;
+	while (i < LEN_CIPSTART)
+	{
+		usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTART[i]);
+		i++;
+	}
+	delay_s(3);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSEND);
+	delay_s(1);
+	usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE);
+	delay_s(1);
+	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
+	delay_s(1);
+	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT);
+	
 	
 	/*
 	//usart_tx_at(USART_SERIAL_EXAMPLE, AT);

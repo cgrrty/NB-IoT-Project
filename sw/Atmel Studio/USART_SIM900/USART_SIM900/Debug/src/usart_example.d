@@ -51,7 +51,8 @@ src/usart_example.d src/usart_example.o: ../src/usart_example.c \
  ../src/ASF/xmega/drivers/usart/usart.h \
  ../src/ASF/xmega/utils/status_codes.h \
  ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/xmega_a1u_xplained_pro.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h \
+ ../src/sim900_at_commands.h ../src/user_network_params.h
 
 ../src/config/conf_usart_example.h:
 
@@ -170,3 +171,7 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/xmega_a1u_xplained_pro.h:
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h:
+
+../src/sim900_at_commands.h:
+
+../src/user_network_params.h:
