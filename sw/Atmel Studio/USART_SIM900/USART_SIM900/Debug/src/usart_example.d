@@ -52,7 +52,14 @@ src/usart_example.d src/usart_example.o: ../src/usart_example.c \
  ../src/ASF/xmega/utils/status_codes.h \
  ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/xmega_a1u_xplained_pro.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h \
- ../src/sim900_at_commands.h ../src/user_network_params.h
+ ../src/sim900_at_commands.h ../src/user_network_params.h \
+ ../src/mqtt/MQTTPacket.h ../src/mqtt/MQTTConnect.h \
+ ../src/mqtt/MQTTPublish.h ../src/mqtt/MQTTSubscribe.h \
+ ../src/mqtt/MQTTUnsubscribe.h ../src/mqtt/MQTTFormat.h \
+ ../src/mqtt/StackTrace.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h \
+ ../src/mqtt/MQTTPacket.h
 
 ../src/config/conf_usart_example.h:
 
@@ -175,3 +182,23 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 ../src/sim900_at_commands.h:
 
 ../src/user_network_params.h:
+
+../src/mqtt/MQTTPacket.h:
+
+../src/mqtt/MQTTConnect.h:
+
+../src/mqtt/MQTTPublish.h:
+
+../src/mqtt/MQTTSubscribe.h:
+
+../src/mqtt/MQTTUnsubscribe.h:
+
+../src/mqtt/MQTTFormat.h:
+
+../src/mqtt/StackTrace.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h:
+
+../src/mqtt/MQTTPacket.h:

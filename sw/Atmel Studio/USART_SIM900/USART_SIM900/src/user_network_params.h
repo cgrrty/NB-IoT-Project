@@ -15,8 +15,10 @@
 #define PASSWORD ""
 
 #define IP_MODE "TCP"
-#define SERVER_ADDR "10.18.0.36"
-#define SERVER_PORT "23"
+//#define SERVER_ADDR "10.18.0.36" //TCP server on remote desktop
+//#define SERVER_PORT "23" //TCP server port on remote desktop
+#define SERVER_ADDR "10.18.0.39" //MQTT server (broker) on remote desktop
+#define SERVER_PORT "1883" //MQTT server port on remote desktop
 
 
 

@@ -93,6 +93,7 @@
 #include <asf.h>
 #include <string.h>
 #include <sim900_at_commands.h>
+#include <mqtt/MQTTPacket.h>
 /*
 	TODO:
 	- integrate response into tx function?
@@ -100,12 +101,22 @@
 	- HW data flow
 	*/
 
+
+
+
+typedef enum {
+	CIPSHUT,
+	CIPSTATUS
+	} gprs_states_t;
+	
+
+
 //status
 uint8_t STATUS = 0;
 
 //Functions declarations
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
-uint8_t at_response(USART_t *usart, uint8_t *cmd);
+uint8_t at_response(USART_t *usart);
 uint8_t at_response_debug(USART_t *usart, uint8_t *cmd);
 void led_blink(uint8_t on_time);
 
@@ -117,57 +128,46 @@ void usart_tx_at(USART_t *usart, uint8_t *cmd) {
 	}
 }
 
-uint8_t at_response(USART_t *usart, uint8_t *cmd) {
+uint8_t at_response(USART_t *usart) {
 	
-	uint8_t cmd_len = strlen(cmd);
-	uint8_t byte;
-	
+	uint8_t init_done = 0;
 	char response[20] = "";
-	char ret;
-	const char ok[sizeof(RESPONSE_OK)-1] = RESPONSE_OK;
-	   
 	STATUS = 0;
-	int i = 0;
+	uint8_t i = 0;
+	uint8_t j = 0;
 	
-	while (i < cmd_len+6)
+	while (!init_done) //usually the AT command is sent in return followed by \r\n
 	{
 		response[i] = usart_getchar(usart);
+		//if ((response[i-1] == 0x0d) & (response[i] == 0x0a)) //check if \r\n is in the response
+		if ((response[i-1] == CR) & (response[i] == LF)) //check if \r\n is in the response
+		{
+			init_done = 1;
+			break;
+		}
 		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 		i++;
 	}
 	
-	usart_tx_at(USART_SERIAL_EXAMPLE, response);
-	//usart_tx_at(USART_SERIAL_EXAMPLE, ok);
-	
-	strncpy(ret, strstr(response, ok), 2);
-	if (strcmp(ret,ok))
+	j = i;
+	while (i < j+4) //after the initial AT return OK or ERROR is sent.
 	{
-		usart_tx_at(USART_SERIAL_EXAMPLE, ret);
-		STATUS = 1;
-	}
-	
-	
-	return STATUS;
-}
-
-uint8_t at_response_debug(USART_t *usart, uint8_t *cmd) {
-	
-	uint8_t cmd_len = strlen(cmd);
-	uint8_t byte;
-	
-	char response[20] = "";
-	STATUS = 0;
-	
-	int i = 0;
-	
-	while (i < cmd_len+10)
-	{
-		usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 		response[i] = usart_getchar(usart);
+		if ((response[i-1] == 0x4f) & (response[i] == 0x4b)) //check if ok is in the response
+		{
+			STATUS = 1;
+			break;
+ 		}
+		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 		i++;
 	}
 	
+	
+	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
+	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 	
 	return STATUS;
 }
@@ -180,17 +180,75 @@ void led_blink(uint8_t on_time) {
 	delay_s(on_time);
 }
 
+/////////////MQTT////////////////////
+int mqtt_packet(int argc, char *argv[])
+{
+	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+	int rc = 0;
+	char buf[200];
+	int buflen = sizeof(buf);
+	int mysock = 0;
+	MQTTString topicString = MQTTString_initializer;
+	char* payload = "mypayload";
+	int payloadlen = strlen(payload);
+	int len = 0;
+	char *host = "m2m.eclipse.org";
+	int port = 1883;
+
+	if (argc > 1)
+	host = argv[1];
+
+	if (argc > 2)
+	port = atoi(argv[2]);
+
+	//mysock = transport_open(host,port);
+	if(mysock < 0)
+	return mysock;
+
+	printf("Sending to hostname %s port %d\n", host, port);
+
+	data.clientID.cstring = "SIM900";
+	data.keepAliveInterval = 20;
+	data.cleansession = 1;
+	data.username.cstring = "";
+	data.password.cstring = "";
+	data.MQTTVersion = 4;
+
+	len = MQTTSerialize_connect((unsigned char *)buf, buflen, &data);
+
+	topicString.cstring = "home/garden/fountain";
+	len += MQTTSerialize_publish((unsigned char *)(buf + len), buflen - len, 0, 0, 0, 0, topicString, (unsigned char *)payload, payloadlen);
+
+	len += MQTTSerialize_disconnect((unsigned char *)(buf + len), buflen - len);
+
+	//rc = transport_sendPacketBuffer(mysock, buf, len);
+	int i = 0;
+	while (i<len)
+	{
+		usart_putchar(USART_SERIAL_SIM900, buf[i]);
+		i++;
+	}
+	usart_putchar(USART_SERIAL_SIM900, CR); //end package (SIM900 requirement in send mode)
+	
+	
+	if (rc == len)
+	printf("Successfully published\n");
+	else
+	printf("Publish failed\n");
+
+	exit:
+	//transport_close(mysock);
+	return 0;
+}
+
+///////////////////////////////////////////////////
+
 
 /*! \brief Main function.
  */
 int main(void)
 {
 	
-	volatile uint8_t tx_length = sizeof(AT);
-	uint8_t received_byte = NULL;
-	uint8_t received_byte2;
-	uint8_t i;
-
 	
 	/* Initialize the board.
 	 * The board-specific conf_board.h file contains the configuration of
@@ -202,6 +260,7 @@ int main(void)
 	//LED setup
 	PORTQ.DIR |= (1<<3);
 	PORTQ.OUT |= (1<<3);
+	
 	
 		
 	// USART for debug (COM port)
@@ -224,10 +283,17 @@ int main(void)
 	// Initialize usart driver in RS232 mode
 	usart_init_rs232(USART_SERIAL_EXAMPLE, &USART_SERIAL_OPTIONS);
 	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_SIM900_OPTIONS);
-
-
+	
+	
+	/*MQTT*/
+	int status = 0; 
+	//status = mqtt_packet(1, "10.8.10.136");	
+	//usart_putchar(USART_SERIAL_EXAMPLE, status+0x30);
+	
 
 	
+
+	//usart_tx_at(USART_SERIAL_SIM900, AT);
 	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT);
 	delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTATUS);
@@ -235,7 +301,7 @@ int main(void)
 	usart_tx_at(USART_SERIAL_SIM900, AT_CIPMUX);
 	delay_s(1);
 	
-	i = 0;
+	int i = 0;
 	while (i < LEN_CSTT)
 	{
 		usart_tx_at(USART_SERIAL_SIM900, AT_CSTT[i]);
@@ -258,7 +324,10 @@ int main(void)
 	
 	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSEND);
 	delay_s(1);
-	usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE);
+	char AT_MESSAGE2 = "\0x40\r";
+	//usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE2);
+	//void mqtt_connect();
+	mqtt_packet(1, "10.8.10.136");
 	delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
 	delay_s(1);
@@ -274,21 +343,25 @@ int main(void)
 		led_blink(1);
 		STATUS = 0;
 	}
+	*/
 	
+	/*
 	//usart_tx_at(USART_SERIAL_EXAMPLE, CR);
 	usart_tx_at(USART_SERIAL_SIM900, CR);
 	delay_s(1);
+	*/
 	
-	
+	/*
 	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CMGF);
 	usart_tx_at(USART_SERIAL_SIM900, AT_CMGF);
-	STATUS = at_response(USART_SERIAL_SIM900, AT_CMGF);
-	if (STATUS)
+	//STATUS = at_response(USART_SERIAL_SIM900);
+	if (at_response(USART_SERIAL_SIM900))
 	{
 		led_blink(1);
 		STATUS = 0;
 	}
-	
+	*/
+	/*
 	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CMGS);
 	usart_tx_at(USART_SERIAL_SIM900, AT_CMGS);
 	//STATUS = at_response(USART_SERIAL_SIM900, AT_CMGS); //not an OK or ERROR response, hence blinking left out.
@@ -306,7 +379,25 @@ int main(void)
 	*/
 	
 	
+	
+	
+	
+	/////////////////////
+	
+	
+	gprs_states_t state = CIPSHUT;
+	gprs_states_t next_state = state;
+	
 	while (true) {
-		//nop
+		
+		switch(state)
+		{
+			case CIPSHUT:
+				next_state = CIPSTATUS;
+				break;
+			case CIPSTATUS:
+				break;
+		}
+		state = next_state;
 	}
 }

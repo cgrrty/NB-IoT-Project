@@ -278,6 +278,63 @@
     <Folder Include="src\config\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\MQTTConnect.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTConnectClient.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTConnectServer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTDeserializePublish.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTFormat.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTFormat.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTPacket.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTPacket.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTPublish.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTSerializePublish.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTSubscribe.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTSubscribeClient.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTSubscribeServer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTUnsubscribe.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTUnsubscribeClient.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\MQTTUnsubscribeServer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\StackTrace.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\umqtt.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\umqtt.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\user_network_params.h">
       <SubType>compile</SubType>
     </Compile>

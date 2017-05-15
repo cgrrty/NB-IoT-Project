@@ -66,6 +66,17 @@ SUBDIRS :=  \
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
+../src/MQTTConnectClient.c \
+../src/MQTTConnectServer.c \
+../src/MQTTDeserializePublish.c \
+../src/MQTTFormat.c \
+../src/MQTTPacket.c \
+../src/MQTTSerializePublish.c \
+../src/MQTTSubscribeClient.c \
+../src/MQTTSubscribeServer.c \
+../src/MQTTUnsubscribeClient.c \
+../src/MQTTUnsubscribeServer.c \
+../src/umqtt.c \
 ../src/ASF/common/services/clock/xmega/sysclk.c \
 ../src/ASF/common/services/ioport/xmega/ioport_compat.c \
 ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/board_init.c \
@@ -84,6 +95,17 @@ ASM_SRCS +=
 
 
 OBJS +=  \
+src/MQTTConnectClient.o \
+src/MQTTConnectServer.o \
+src/MQTTDeserializePublish.o \
+src/MQTTFormat.o \
+src/MQTTPacket.o \
+src/MQTTSerializePublish.o \
+src/MQTTSubscribeClient.o \
+src/MQTTSubscribeServer.o \
+src/MQTTUnsubscribeClient.o \
+src/MQTTUnsubscribeServer.o \
+src/umqtt.o \
 src/ASF/common/services/clock/xmega/sysclk.o \
 src/ASF/common/services/ioport/xmega/ioport_compat.o \
 src/ASF/xmega/boards/xmega_a1u_xplained_pro/board_init.o \
@@ -95,6 +117,17 @@ src/at_parser.o \
 src/usart_example.o
 
 OBJS_AS_ARGS +=  \
+src/MQTTConnectClient.o \
+src/MQTTConnectServer.o \
+src/MQTTDeserializePublish.o \
+src/MQTTFormat.o \
+src/MQTTPacket.o \
+src/MQTTSerializePublish.o \
+src/MQTTSubscribeClient.o \
+src/MQTTSubscribeServer.o \
+src/MQTTUnsubscribeClient.o \
+src/MQTTUnsubscribeServer.o \
+src/umqtt.o \
 src/ASF/common/services/clock/xmega/sysclk.o \
 src/ASF/common/services/ioport/xmega/ioport_compat.o \
 src/ASF/xmega/boards/xmega_a1u_xplained_pro/board_init.o \
@@ -106,6 +139,17 @@ src/at_parser.o \
 src/usart_example.o
 
 C_DEPS +=  \
+src/MQTTConnectClient.d \
+src/MQTTConnectServer.d \
+src/MQTTDeserializePublish.d \
+src/MQTTFormat.d \
+src/MQTTPacket.d \
+src/MQTTSerializePublish.d \
+src/MQTTSubscribeClient.d \
+src/MQTTSubscribeServer.d \
+src/MQTTUnsubscribeClient.d \
+src/MQTTUnsubscribeServer.d \
+src/umqtt.d \
 src/ASF/common/services/clock/xmega/sysclk.d \
 src/ASF/common/services/ioport/xmega/ioport_compat.d \
 src/ASF/xmega/boards/xmega_a1u_xplained_pro/board_init.d \
@@ -117,6 +161,17 @@ src/at_parser.d \
 src/usart_example.d
 
 C_DEPS_AS_ARGS +=  \
+src/MQTTConnectClient.d \
+src/MQTTConnectServer.d \
+src/MQTTDeserializePublish.d \
+src/MQTTFormat.d \
+src/MQTTPacket.d \
+src/MQTTSerializePublish.d \
+src/MQTTSubscribeClient.d \
+src/MQTTSubscribeServer.d \
+src/MQTTUnsubscribeClient.d \
+src/MQTTUnsubscribeServer.d \
+src/umqtt.d \
 src/ASF/common/services/clock/xmega/sysclk.d \
 src/ASF/common/services/ioport/xmega/ioport_compat.d \
 src/ASF/xmega/boards/xmega_a1u_xplained_pro/board_init.d \
@@ -156,6 +211,35 @@ LINKER_SCRIPT_DEP+=
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+src/%.o: ../src/%.c
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU C Compiler : 5.4.0
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -DDEBUG -DIOPORT_XMEGA_COMPAT -DBOARD=XMEGA_A1U_XPLAINED_PRO  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\include" -I"../src/ASF/common/services/gpio" -I"../src/ASF/common/services/ioport" -I"../src/ASF/xmega/utils/preprocessor" -I"../src/ASF/xmega/utils" -I"../src/ASF/common/utils" -I"../src/ASF/common/boards" -I"../src/ASF/xmega/drivers/usart" -I"../src/ASF/common/services/clock" -I"../src/ASF/xmega/drivers/cpu" -I"../src/ASF/xmega/drivers/nvm" -I"../src/ASF/xmega/drivers/pmic" -I"../src/ASF/xmega/boards/xmega_a1u_xplained_pro" -I"../src/ASF/xmega/boards" -I"../src" -I"../src/config" -I"../src/ASF/common/services/delay"  -O1 -fdata-sections -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g3 -Wall -mmcu=atxmega128a1u -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\gcc\dev\atxmega128a1u" -c -std=gnu99 -fno-strict-aliasing -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -mrelax -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
 src/ASF/common/services/clock/xmega/%.o: ../src/ASF/common/services/clock/xmega/%.c
 	@echo Building file: $<
 	@echo Invoking: AVR/GNU C Compiler : 5.4.0
@@ -185,13 +269,6 @@ src/ASF/xmega/drivers/nvm/%.o: ../src/ASF/xmega/drivers/nvm/%.c
 	
 
 src/ASF/xmega/drivers/usart/%.o: ../src/ASF/xmega/drivers/usart/%.c
-	@echo Building file: $<
-	@echo Invoking: AVR/GNU C Compiler : 5.4.0
-	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -DDEBUG -DIOPORT_XMEGA_COMPAT -DBOARD=XMEGA_A1U_XPLAINED_PRO  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\include" -I"../src/ASF/common/services/gpio" -I"../src/ASF/common/services/ioport" -I"../src/ASF/xmega/utils/preprocessor" -I"../src/ASF/xmega/utils" -I"../src/ASF/common/utils" -I"../src/ASF/common/boards" -I"../src/ASF/xmega/drivers/usart" -I"../src/ASF/common/services/clock" -I"../src/ASF/xmega/drivers/cpu" -I"../src/ASF/xmega/drivers/nvm" -I"../src/ASF/xmega/drivers/pmic" -I"../src/ASF/xmega/boards/xmega_a1u_xplained_pro" -I"../src/ASF/xmega/boards" -I"../src" -I"../src/config" -I"../src/ASF/common/services/delay"  -O1 -fdata-sections -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g3 -Wall -mmcu=atxmega128a1u -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\gcc\dev\atxmega128a1u" -c -std=gnu99 -fno-strict-aliasing -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -mrelax -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
-	@echo Finished building: $<
-	
-
-src/%.o: ../src/%.c
 	@echo Building file: $<
 	@echo Invoking: AVR/GNU C Compiler : 5.4.0
 	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -DDEBUG -DIOPORT_XMEGA_COMPAT -DBOARD=XMEGA_A1U_XPLAINED_PRO  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\include" -I"../src/ASF/common/services/gpio" -I"../src/ASF/common/services/ioport" -I"../src/ASF/xmega/utils/preprocessor" -I"../src/ASF/xmega/utils" -I"../src/ASF/common/utils" -I"../src/ASF/common/boards" -I"../src/ASF/xmega/drivers/usart" -I"../src/ASF/common/services/clock" -I"../src/ASF/xmega/drivers/cpu" -I"../src/ASF/xmega/drivers/nvm" -I"../src/ASF/xmega/drivers/pmic" -I"../src/ASF/xmega/boards/xmega_a1u_xplained_pro" -I"../src/ASF/xmega/boards" -I"../src" -I"../src/config" -I"../src/ASF/common/services/delay"  -O1 -fdata-sections -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g3 -Wall -mmcu=atxmega128a1u -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\gcc\dev\atxmega128a1u" -c -std=gnu99 -fno-strict-aliasing -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration -Wpointer-arith -mrelax -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
