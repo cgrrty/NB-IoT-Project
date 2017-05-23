@@ -13,14 +13,16 @@
 
 //Special AT characters
 #define CR "\r" //carriage return
+#define CR_UINT8 0x0d
 #define LF "\n" //line feed
+#define CR_UINT8 0x0a
 #define CTRL_Z "\x1a" //ctrl+z
 #define QUOTE "\"" //     "
 #define DELIM "\",\"" //   ","
 
 
 //General AT commands
-#define AT "AT\r"
+#define AT_AT "AT\r"
 #define AT_CGATT "AT+CGATT=<1>"
 
 //AT SMS commands
@@ -33,13 +35,14 @@
 #define AT_CIPSTATUS "AT+CIPSTATUS\r" //check if IP stack is initialized
 #define AT_CIPMUX "AT+CIPMUX=0\r" //0: single connection mode
 #define AT_CSTT_INIT "AT+CSTT="
-#define LEN_CSTT 9 //find another solution
+uint8_t LEN_CSTT = 9; //find another solution
 char *AT_CSTT[] = {AT_CSTT_INIT,QUOTE,APN,DELIM,USERNAME,DELIM,PASSWORD,QUOTE,CR}; //connect to APN
+//#define AT_CSTT "AT+CSTT=\"apn1.lillebakk.com\",\"\",\"\"\r"
 #define AT_CIICR "AT+CIICR\r" //start wireless connection with GPRS
 #define AT_CIFSR "AT+CIFSR\r" //return the local IP address (sim card)
 #define AT_CIPSTART_INIT "AT+CIPSTART=" //didn't add strcat function, so the concenatiation is done during transmit.
-#define LEN_CIPSTART 9
-char *AT_CIPSTART[LEN_CIPSTART] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SERVER_PORT,QUOTE,CR};
+uint8_t LEN_CIPSTART = 9;
+char *AT_CIPSTART[] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SERVER_PORT,QUOTE,CR};
 #define AT_CIPSEND "AT+CIPSEND\r" //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
 								//It must be terminated with ctrl+z.
 								//There will be a response from the server.
@@ -50,6 +53,8 @@ char *AT_CIPSTART[LEN_CIPSTART] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_A
 #define RESPONSE_HEADER "\r\n"
 #define RESPONSE_FOOTER "\r\n"
 #define RESPONSE_OK "OK"
+#define O_UINT8 0x4f
+#define K_UINT8 0x4b
 
 
 #endif /* SIM900_AT_COMMANDS_H_ */

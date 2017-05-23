@@ -94,6 +94,8 @@
 #include <string.h>
 #include <sim900_at_commands.h>
 #include <mqtt/MQTTPacket.h>
+#include <avr/interrupt.h>
+//#include <tx_gprs.h>
 /*
 	TODO:
 	- integrate response into tx function?
@@ -105,20 +107,56 @@
 
 
 typedef enum {
-	CIPSHUT,
-	CIPSTATUS
-	} gprs_states_t;
-	
+	AT,
+	CIPSHUT_INIT, //reset if any previous IP sessions are not closed.
+	CIPSTATUS,
+	CIPMUX,
+	CSTT,
+	CIICR,
+	CIFSR,
+	CIPSTART,
+	CIPSEND,
+	CIPSHUT
+} gprs_states_t;
 
 
-//status
-uint8_t STATUS = 0;
+typedef enum {
+	READ_EXT_DATA,
+	MEASURE,
+	CALC,
+	STORE_EXT_MEM,
+	TX_DATA,
+	RX_DATA
+} controller_states_t;
+
+
+
+//status and modes
+#define OK 0
+#define TIMEOUT 1
+#define STATUS_AT_DEBUG "\r\nSTATUS AT: "
+
+
+volatile uint8_t status_at = 0;
+volatile uint8_t status_at_timeout = 0;
+volatile uint8_t tx_active = 0;
+
+
+//timers
+#define AT_TIMEOUT_TC TCC0 //define AT command timeout counter.
+//#define AT_TIMEOUT 1000
+
+
 
 //Functions declarations
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
+uint8_t usart_rx_at(USART_t *usart);
 uint8_t at_response(USART_t *usart);
-uint8_t at_response_debug(USART_t *usart, uint8_t *cmd);
 void led_blink(uint8_t on_time);
+int mqtt_packet(char *payload);
+void at_timeout_start();
+void at_timeout_stop();
+void response_debug(uint8_t code);
 
 //Functions
 void usart_tx_at(USART_t *usart, uint8_t *cmd) {
@@ -128,48 +166,58 @@ void usart_tx_at(USART_t *usart, uint8_t *cmd) {
 	}
 }
 
+uint8_t usart_rx_at(USART_t *usart)
+{
+	at_timeout_start();
+	
+	while ((usart_rx_is_complete(usart) == false) & (status_at_timeout == 0)) {
+	}
+	
+	at_timeout_stop();
+	
+	return ((uint8_t)(usart)->DATA);
+}
+
 uint8_t at_response(USART_t *usart) {
 	
 	uint8_t init_done = 0;
-	char response[20] = "";
-	STATUS = 0;
+	uint8_t len_response = 50;
+	char response[len_response];
 	uint8_t i = 0;
 	uint8_t j = 0;
+	status_at_timeout = 0;
 	
-	while (!init_done) //usually the AT command is sent in return followed by \r\n
+	while ((status_at_timeout == 0) & (init_done == 0)) //usually the AT command is sent in return followed by \r\n
 	{
-		response[i] = usart_getchar(usart);
-		//if ((response[i-1] == 0x0d) & (response[i] == 0x0a)) //check if \r\n is in the response
-		if ((response[i-1] == CR) & (response[i] == LF)) //check if \r\n is in the response
+		response[i] = usart_rx_at(usart);
+		
+		
+		if ((response[i-1] == 0x4f) & (response[i] == 0x4b)) //check if OK is in the response
 		{
 			init_done = 1;
+			i++;
 			break;
 		}
+		
+		
 		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 		i++;
 	}
 	
-	j = i;
-	while (i < j+4) //after the initial AT return OK or ERROR is sent.
+	
+	
+	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
+	while (j<i)
 	{
-		response[i] = usart_getchar(usart);
-		if ((response[i-1] == 0x4f) & (response[i] == 0x4b)) //check if ok is in the response
-		{
-			STATUS = 1;
-			break;
- 		}
-		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-		i++;
+		usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
+		j++;
 	}
-	
-	
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 	
-	return STATUS;
+	
+	return status_at_timeout;
 }
 
 void led_blink(uint8_t on_time) {
@@ -180,33 +228,30 @@ void led_blink(uint8_t on_time) {
 	delay_s(on_time);
 }
 
+void at_timeout_start() {
+	
+	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
+	AT_TIMEOUT_TC.CNT = 0; //reset counter
+	sei(); //enable interrupt
+}
+
+void at_timeout_stop() {
+	cli(); //disable interrupt
+	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
+	
+}
 /////////////MQTT////////////////////
-int mqtt_packet(int argc, char *argv[])
+int mqtt_packet(char *payload)
 {
 	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
-	int rc = 0;
+	//int rc = 0;
 	char buf[200];
 	int buflen = sizeof(buf);
-	int mysock = 0;
 	MQTTString topicString = MQTTString_initializer;
-	char* payload = "mypayload";
+	//char* payload = "mypayload";
 	int payloadlen = strlen(payload);
 	int len = 0;
-	char *host = "m2m.eclipse.org";
-	int port = 1883;
-
-	if (argc > 1)
-	host = argv[1];
-
-	if (argc > 2)
-	port = atoi(argv[2]);
-
-	//mysock = transport_open(host,port);
-	if(mysock < 0)
-	return mysock;
-
-	printf("Sending to hostname %s port %d\n", host, port);
-
+	
 	data.clientID.cstring = "SIM900";
 	data.keepAliveInterval = 20;
 	data.cleansession = 1;
@@ -221,7 +266,6 @@ int mqtt_packet(int argc, char *argv[])
 
 	len += MQTTSerialize_disconnect((unsigned char *)(buf + len), buflen - len);
 
-	//rc = transport_sendPacketBuffer(mysock, buf, len);
 	int i = 0;
 	while (i<len)
 	{
@@ -230,32 +274,50 @@ int mqtt_packet(int argc, char *argv[])
 	}
 	usart_putchar(USART_SERIAL_SIM900, CR); //end package (SIM900 requirement in send mode)
 	
-	
-	if (rc == len)
-	printf("Successfully published\n");
-	else
-	printf("Publish failed\n");
-
 	exit:
-	//transport_close(mysock);
+	
 	return 0;
 }
 
 ///////////////////////////////////////////////////
+
+void response_debug(uint8_t code) {
+	usart_tx_at(USART_SERIAL_EXAMPLE, STATUS_AT_DEBUG);
+	usart_putchar(USART_SERIAL_EXAMPLE, 0x30+code);
+}  
+
+void at_command_timeout_setup() {
+	//AT_TIMEOUT_TC.INTCTRLA |= (0<<0); //disable counter
+	AT_TIMEOUT_TC.INTCTRLA |= (1<<0);
+	AT_TIMEOUT_TC.CTRLA = TC_CLKSEL_DIV1024_gc;
+	AT_TIMEOUT_TC.CTRLB |= 0b000;
+	AT_TIMEOUT_TC.PER = 6000;
+}
+
+
+ISR(TCC0_OVF_vect) {
+	at_timeout_stop();
+	status_at_timeout = 1;
+}
 
 
 /*! \brief Main function.
  */
 int main(void)
 {
+	cli();
 	
-	
+	//general counter variable used by many functions.
+	uint8_t i = 0;
+		
 	/* Initialize the board.
 	 * The board-specific conf_board.h file contains the configuration of
 	 * the board initialization.
 	 */
 	board_init();
-	sysclk_init();
+	//pmic_init(); //needed for TC ASF code. Check if needed in real implementation.
+	PMIC.CTRL = 0x01; //low level interrupt
+	//sysclk_init();
 	
 	//LED setup
 	PORTQ.DIR |= (1<<3);
@@ -285,119 +347,196 @@ int main(void)
 	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_SIM900_OPTIONS);
 	
 	
-	/*MQTT*/
-	int status = 0; 
-	//status = mqtt_packet(1, "10.8.10.136");	
-	//usart_putchar(USART_SERIAL_EXAMPLE, status+0x30);
-	
-
-	
-
-	//usart_tx_at(USART_SERIAL_SIM900, AT);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT);
-	delay_s(1);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTATUS);
-	delay_s(1);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIPMUX);
-	delay_s(1);
-	
-	int i = 0;
-	while (i < LEN_CSTT)
-	{
-		usart_tx_at(USART_SERIAL_SIM900, AT_CSTT[i]);
-		i++;
-	}
-	delay_s(1);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIICR);
-	delay_s(3);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIFSR);
-	delay_s(1);
-	
-	i = 0;
-	while (i < LEN_CIPSTART)
-	{
-		usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTART[i]);
-		i++;
-	}
-	delay_s(3);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSEND);
-	delay_s(1);
-	char AT_MESSAGE2 = "\0x40\r";
-	//usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE2);
-	//void mqtt_connect();
-	mqtt_packet(1, "10.8.10.136");
-	delay_s(1);
-	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
-	delay_s(1);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT);
-	
+	at_command_timeout_setup();
+	//sei();
 	
 	/*
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT);
-	usart_tx_at(USART_SERIAL_SIM900, AT);
-	STATUS = at_response(USART_SERIAL_SIM900, AT);
-	if (STATUS)
-	{
-		led_blink(1);
-		STATUS = 0;
-	}
-	*/
-	
-	/*
-	//usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_SIM900, CR);
-	delay_s(1);
-	*/
-	
-	/*
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CMGF);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CMGF);
-	//STATUS = at_response(USART_SERIAL_SIM900);
-	if (at_response(USART_SERIAL_SIM900))
-	{
-		led_blink(1);
-		STATUS = 0;
-	}
-	*/
-	/*
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CMGS);
-	usart_tx_at(USART_SERIAL_SIM900, AT_CMGS);
-	//STATUS = at_response(USART_SERIAL_SIM900, AT_CMGS); //not an OK or ERROR response, hence blinking left out.
-	delay_s(1);
-	led_blink(1);
-	
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_MESSAGE);
-	usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE);
-	//STATUS = at_response(USART_SERIAL_SIM900, AT_MESSAGE); //not an OK or ERROR response, hence blinking left out.
-	delay_s(1);
-	led_blink(1);
-	
-	//usart_tx_at(USART_SERIAL_EXAMPLE, CTRL_Z);
-	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
+	//INIT TC
+	tc_enable(&AT_TIMEOUT_TC);
+//	tc_set_overflow_interrupt_callback(&AT_TIMEOUT_TC, at_command_timeout);
+	tc_set_wgm(&AT_TIMEOUT_TC, TC_WG_NORMAL); 
+	tc_write_period(&AT_TIMEOUT_TC, 1000); 
+	tc_set_overflow_interrupt_level(&AT_TIMEOUT_TC, TC_INT_LVL_LO);
+	cpu_irq_enable();  
+	tc_write_clock_source(&AT_TIMEOUT_TC, TC_CLKSEL_DIV1024_gc); //sysclk divided.
+	///////////////////////////////////////////////
+	//tc_disable(&AT_TIMEOUT_TC);
+	//at_timeout_stop();
 	*/
 	
 	
+	gprs_states_t gprs_state = AT; //CIPSHUT_INIT;
+	gprs_states_t gprs_next_state = gprs_state;
 	
 	
+	while(0) {
+		//usart_putchar(USART_SERIAL_EXAMPLE, 0x40);
+		//delay_s(1);
+	}
 	
-	/////////////////////
 	
-	
-	gprs_states_t state = CIPSHUT;
-	gprs_states_t next_state = state;
-	
-	while (true) {
+	//usart_putchar(USART_SERIAL_EXAMPLE, 0x41);
+	tx_active = 1;
+	while (tx_active == 1) {
 		
-		switch(state)
+		//Configuring the GPRS state machine. Follow specification from flow chart.
+		switch(gprs_state) //compare against controller state????
 		{
-			case CIPSHUT:
-				next_state = CIPSTATUS;
+			case AT:
+				gprs_next_state = CIPSHUT_INIT;
+				//tx_active = 0; //debug
+				
+				usart_tx_at(USART_SERIAL_SIM900, AT_AT); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+								
+				//delay_s(1);
+				
 				break;
-			case CIPSTATUS:
+			
+			case CIPSHUT_INIT: 
+				gprs_next_state = CIPSTATUS;
+				//tx_active = 0; //debug
+				
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				//delay_s(1);
+				
 				break;
+			
+						
+			case CIPSTATUS: 
+				gprs_next_state = CIPMUX;
+				//tx_active = 0; //debug
+				
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTATUS); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				//delay_s(1);
+				
+				break;
+			
+										
+			case CIPMUX: 
+				gprs_next_state = CSTT;
+				//tx_active = 0; //debug
+								
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIPMUX); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				//delay_s(1);
+				
+				break;
+			
+			
+			case CSTT: 
+				gprs_next_state = CIICR;
+				//tx_active = 0; //debug
+				while (i < LEN_CSTT)
+				{
+					usart_tx_at(USART_SERIAL_SIM900, AT_CSTT[i]); //return OK
+					//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CSTT[i]);
+					i++;
+				}
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				//delay_s(1);
+				
+				break;
+			
+						
+			case CIICR: 
+				gprs_next_state = CIFSR;
+				
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIICR); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				//delay_s(3);
+				
+				break;
+			
+						
+			case CIFSR: 
+				gprs_next_state = CIPSTART;
+				
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIFSR); //return IP
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				delay_s(1); //for safety, could add this response table as well.
+				
+				break;
+			
+			
+			case CIPSTART: 
+				gprs_next_state = CIPSEND;
+				//tx_active = 0; //debug
+				
+				i = 0;
+				while (i < LEN_CIPSTART)
+				{
+					usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTART[i]); //return several OK
+					//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CIPSTART[i]);
+					i++;
+				}
+				status_at = at_response(USART_SERIAL_SIM900); //WHY DOES THIS ONE FAIL???????
+								
+				delay_s(3); //add check for CONNECT before removing this one.
+				
+				break;
+			
+						
+			case CIPSEND: 
+				gprs_next_state = CIPSHUT;
+				
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSEND); //return >
+				delay_s(1);
+				char* AT_MESSAGE2 = "0 0 0 512 1023 125";
+				//usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE2);
+				//void mqtt_connect();
+				mqtt_packet(AT_MESSAGE2);
+				delay_s(1);
+				usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				//delay_s(1);
+				
+				break;
+			
+			
+			case CIPSHUT: 
+				//gprs_next_state = CIPSHUT_INIT;
+				tx_active = 0; //done for now...
+							
+				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT); //return OK
+				status_at = at_response(USART_SERIAL_SIM900);
+				
+				break;
+			
+						
+			default:
+			
+// 			need to figure out which statements/stage to enter if this occurs.
+// 			It will be dependent on the error message. 
+// 			Go to sleep?
+// 			Measure again?
+// 			Transmit again?
+// 			Other?
+			
+			gprs_next_state = CIPSHUT_INIT;
+			tx_active = 0;
+			break;
 		}
-		state = next_state;
+		
+		gprs_state = gprs_next_state;
+		
 	}
+	
+	led_blink(1);
+	
+	//done
+	while (1)
+	{
+		//nop
+	}
+	
 }

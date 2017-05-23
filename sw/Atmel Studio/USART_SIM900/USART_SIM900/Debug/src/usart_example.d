@@ -48,6 +48,8 @@ src/usart_example.d src/usart_example.o: ../src/usart_example.c \
  ../src/ASF/common/services/ioport/xmega/ioport_compat.h \
  ../src/ASF/common/services/ioport/xmega/../ioport.h \
  ../src/ASF/xmega/drivers/nvm/nvm.h ../src/ASF/xmega/drivers/pmic/pmic.h \
+ ../src/ASF/xmega/drivers/sleep/sleep.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sleep.h \
  ../src/ASF/xmega/drivers/usart/usart.h \
  ../src/ASF/xmega/utils/status_codes.h \
  ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/xmega_a1u_xplained_pro.h \
@@ -170,6 +172,10 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 ../src/ASF/xmega/drivers/nvm/nvm.h:
 
 ../src/ASF/xmega/drivers/pmic/pmic.h:
+
+../src/ASF/xmega/drivers/sleep/sleep.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sleep.h:
 
 ../src/ASF/xmega/drivers/usart/usart.h:
 
