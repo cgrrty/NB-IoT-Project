@@ -95,6 +95,7 @@
 #include <sim900_at_commands.h>
 #include <mqtt/MQTTPacket.h>
 #include <avr/interrupt.h>
+#include <math.h>
 //#include <tx_gprs.h>
 /*
 	TODO:
@@ -119,6 +120,20 @@ typedef enum {
 	CIPSHUT
 } gprs_states_t;
 
+/*
+typedef enum {
+	AT,
+	CIPSHUT_INIT, //reset if any previous IP sessions are not closed.
+	CIPSTATUS,
+	CIPMUX,
+	CSTT,
+	CIICR,
+	CIFSR,
+	CIPSTART,
+	CIPSEND,
+	CIPSHUT
+} nbiot_states_t;
+*/
 
 typedef enum {
 	READ_EXT_DATA,
@@ -129,7 +144,20 @@ typedef enum {
 	RX_DATA
 } controller_states_t;
 
+//sampling and storage
+static const uint16_t TS = 5; //actual sampling in seconds
+static const uint16_t TTX = 60; //actual transfer rate in seconds
+static const uint16_t TAVG = 60; //actual averaging time in seconds
 
+//uint16_t accu_data[3600]; //allocating internal accumulation storage.
+uint32_t accu_data = 0; //allocating internal accumulation storage.
+uint16_t accu_data_cnt = 0; //counter for accu data.
+uint16_t avg_data = 0;
+#define MIN_DATA_RESET 0xffff
+uint16_t min_data = MIN_DATA_RESET;
+uint16_t max_data = 0;
+uint16_t tran_data = 0;
+//uint16_t avg_data[4]; //avg, min, max, tran => data to be transferred to external memory and over air.
 
 //status and modes
 #define OK 0
@@ -146,14 +174,19 @@ volatile uint8_t tx_active = 0;
 #define AT_TIMEOUT_TC TCC0 //define AT command timeout counter.
 //#define AT_TIMEOUT 1000
 
+#define CONFIG_RTC_PRESCALER RTC_PRESCALER_DIV1024_gc
+#define CONFIG_RTC_SOURCE SYSCLK_RTCSRC_ULP
 
+//ADC
+#define ADC_LC ADCA //define ADC A for load cell
+#define ADC_LC_CH ADC_CH0 //define channel 0 for load cell measurements.
 
 //Functions declarations
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
 uint8_t usart_rx_at(USART_t *usart);
 uint8_t at_response(USART_t *usart);
 void led_blink(uint8_t on_time);
-int mqtt_packet(char *payload);
+//int mqtt_packet(char *payload);
 void at_timeout_start();
 void at_timeout_stop();
 void response_debug(uint8_t code);
@@ -241,15 +274,16 @@ void at_timeout_stop() {
 	
 }
 /////////////MQTT////////////////////
-int mqtt_packet(char *payload)
+int mqtt_packet(char *payload) //*payload is the original
 {
 	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
-	//int rc = 0;
+	
 	char buf[200];
 	int buflen = sizeof(buf);
 	MQTTString topicString = MQTTString_initializer;
-	//char* payload = "mypayload";
+	
 	int payloadlen = strlen(payload);
+	//int payloadlen = 4;
 	int len = 0;
 	
 	data.clientID.cstring = "SIM900";
@@ -263,7 +297,7 @@ int mqtt_packet(char *payload)
 
 	topicString.cstring = "home/garden/fountain";
 	len += MQTTSerialize_publish((unsigned char *)(buf + len), buflen - len, 0, 0, 0, 0, topicString, (unsigned char *)payload, payloadlen);
-
+	
 	len += MQTTSerialize_disconnect((unsigned char *)(buf + len), buflen - len);
 
 	int i = 0;
@@ -291,8 +325,46 @@ void at_command_timeout_setup() {
 	AT_TIMEOUT_TC.INTCTRLA |= (1<<0);
 	AT_TIMEOUT_TC.CTRLA = TC_CLKSEL_DIV1024_gc;
 	AT_TIMEOUT_TC.CTRLB |= 0b000;
-	AT_TIMEOUT_TC.PER = 6000;
+	AT_TIMEOUT_TC.PER = 8000; //2000 = 1 second.
 }
+
+static void adc_init(void)
+{
+	struct adc_config adc_conf;
+	struct adc_channel_config adcch_conf;
+	adc_read_configuration(&ADC_LC, &adc_conf);
+	adcch_read_configuration(&ADC_LC, ADC_LC_CH, &adcch_conf);
+	adc_set_conversion_parameters(&adc_conf, ADC_SIGN_OFF, ADC_RES_12, ADC_REF_VCC); //vdd/1,6 ~ 2V @ 3,3V.
+	adc_set_conversion_trigger(&adc_conf, ADC_TRIG_MANUAL, 1, 0);
+	adc_set_clock_rate(&adc_conf, 200000UL);
+	adcch_set_input(&adcch_conf, ADCCH_POS_PIN0, ADCCH_NEG_NONE, 1);
+	//adcch_set_input(&adcch_conf, ADCCH_POS_SCALED_VCC, ADCCH_NEG_NONE, 1);
+	adc_write_configuration(&ADC_LC, &adc_conf);
+	adcch_write_configuration(&ADC_LC, ADC_LC_CH, &adcch_conf);
+}
+
+uint16_t adc_result_average (uint8_t num_avg) {
+	
+	uint8_t i = 0;
+	uint32_t res = 0;
+	uint16_t res_median[num_avg];
+	
+	while (i<num_avg)
+	{
+		adc_start_conversion(&ADC_LC, ADC_LC_CH);
+		adc_wait_for_interrupt_flag(&ADC_LC, ADC_LC_CH);
+		res_median[i] = adc_get_result(&ADC_LC, ADC_LC_CH);
+		res = res + res_median[i];
+		i++;
+	}
+	
+	res = res/num_avg;
+	
+	
+	//return res_median[(num_avg-1)/2];
+	return res;	
+}
+
 
 
 ISR(TCC0_OVF_vect) {
@@ -309,6 +381,7 @@ int main(void)
 	
 	//general counter variable used by many functions.
 	uint8_t i = 0;
+	
 		
 	/* Initialize the board.
 	 * The board-specific conf_board.h file contains the configuration of
@@ -323,7 +396,37 @@ int main(void)
 	PORTQ.DIR |= (1<<3);
 	PORTQ.OUT |= (1<<3);
 	
+	//ADC setup
+	adc_init();
+	uint16_t loadcell_adc_result = 0;
+	uint16_t loadcell_adc_result_prev = 0;
+	int16_t loadcell_adc_result_tran = 0; //signed due to difference in both directions
+	int16_t loadcell_adc_result_tran_prev = 0; //signed due to difference in both directions
+	int16_t loadcell_adc_result_tran_max = 0; //signed due to difference in both directions
 	
+	int loadcell_adc_result_low;
+	int loadcell_adc_result_mid;
+	int loadcell_adc_result_hi;
+	
+	char loadcell_adc_result_ascii[5] = "";
+	char loadcell_adc_result_min_ascii[5] = "";
+	char loadcell_adc_result_max_ascii[5] = "";
+	char loadcell_adc_result_tran_ascii[5] = "";
+	uint8_t year = 0;
+	uint8_t month = 0;
+	uint8_t day = 0;
+	uint8_t hour = 0;
+	uint8_t minute = 0;
+	uint8_t second = 0;
+	char year_ascii[3] = "";
+	char month_ascii[3] = "";
+	char day_ascii[3] = "";
+	char hour_ascii[3] = "";
+	char minute_ascii[3] = "";
+	char second_ascii[3] = "";
+	char transfer_data[64] = ""; //currently 45 if sent as text.
+	
+	adc_enable(&ADC_LC); //Later??? By interrupt?
 		
 	// USART for debug (COM port)
 	static usart_rs232_options_t USART_SERIAL_OPTIONS = {
@@ -350,6 +453,9 @@ int main(void)
 	at_command_timeout_setup();
 	//sei();
 	
+	//WDT setup
+	
+	
 	/*
 	//INIT TC
 	tc_enable(&AT_TIMEOUT_TC);
@@ -365,18 +471,146 @@ int main(void)
 	*/
 	
 	
-	gprs_states_t gprs_state = AT; //CIPSHUT_INIT;
-	gprs_states_t gprs_next_state = gprs_state;
 	
+	controller_states_t controller_state = READ_EXT_DATA;
+	controller_states_t controller_next_state = controller_state;
 	
-	while(0) {
-		//usart_putchar(USART_SERIAL_EXAMPLE, 0x40);
-		//delay_s(1);
+	tx_active = 1;
+	while(tx_active) {
+		
+		
+		
+		delay_s(1); //1 ~ 6s
+		
+		
+		
+		//Configuring the controller state machine. Follow specification from flow chart.
+		switch(controller_state) //compare against controller state????
+		{
+			case READ_EXT_DATA:
+				controller_next_state = MEASURE;
+			
+			break;
+			
+			case MEASURE:
+				
+				//loadcell_adc_result = 1203;			
+				loadcell_adc_result = adc_result_average(9);
+				accu_data += loadcell_adc_result; //accumulate
+				
+				
+				loadcell_adc_result_tran = loadcell_adc_result - loadcell_adc_result_prev;
+				loadcell_adc_result_prev = loadcell_adc_result;
+				
+				//debug
+				char debugdata[5];
+				itoa(loadcell_adc_result, debugdata, 10);
+				usart_tx_at(USART_SERIAL_EXAMPLE, debugdata);
+				usart_tx_at(USART_SERIAL_EXAMPLE, SPACE);
+				
+				
+				if (loadcell_adc_result<min_data)
+				{
+					min_data = loadcell_adc_result;
+				}
+				if (loadcell_adc_result>max_data)
+				{
+					max_data = loadcell_adc_result;
+				}
+				if ((abs(loadcell_adc_result_tran) > abs(loadcell_adc_result_tran_max)) & accu_data_cnt != 0) //first step is not valid due to only one value.
+				{
+					loadcell_adc_result_tran_max = loadcell_adc_result_tran;
+				}
+				
+				
+				accu_data_cnt++;
+				if (accu_data_cnt >= (TAVG/TS) )
+				{
+					avg_data = accu_data/accu_data_cnt;
+					controller_next_state = TX_DATA; //actually calc....or???
+					accu_data = 0;
+					accu_data_cnt = 0; //reset counter
+					loadcell_adc_result_prev = 0;
+					loadcell_adc_result_tran = 0;
+				}
+				else
+				{
+					controller_next_state = MEASURE;
+				}
+			break;
+			
+			case CALC:
+			
+			case TX_DATA:
+				controller_next_state = RX_DATA;
+				itoa(avg_data, loadcell_adc_result_ascii, 10); //convert to hex to lower transferred bytes.
+				itoa(min_data, loadcell_adc_result_min_ascii, 10); //convert to hex to lower transferred bytes.
+				itoa(max_data, loadcell_adc_result_max_ascii, 10); //convert to hex to lower transferred bytes.
+				itoa(loadcell_adc_result_tran_max, loadcell_adc_result_tran_ascii, 10); //convert to hex to lower transferred bytes.
+				min_data = MIN_DATA_RESET; //reset min data
+				max_data = 0; //reset max data
+				loadcell_adc_result_tran_max = 0;
+				
+				
+				year = 17;
+				itoa(year, year_ascii,16);
+				month = 6;
+				itoa(month, month_ascii,16);
+				day = 7;
+				itoa(day, day_ascii,16);
+				hour = 13;
+				itoa(hour, hour_ascii,16);
+				minute++;
+				itoa(minute, minute_ascii, 16);
+				second = 0;
+				itoa(second, second_ascii,16);
+				
+				strcpy(transfer_data, loadcell_adc_result_ascii);
+				strcat(transfer_data, ",");
+				strcat(transfer_data, loadcell_adc_result_min_ascii);
+				strcat(transfer_data, ",");
+				strcat(transfer_data, loadcell_adc_result_max_ascii);
+				strcat(transfer_data, ",");
+				strcat(transfer_data, loadcell_adc_result_tran_ascii);
+				/*
+				strcat(transfer_data, ",");
+				strcat(transfer_data, year_ascii);
+				strcat(transfer_data, month_ascii);
+				strcat(transfer_data, day_ascii);
+				strcat(transfer_data, hour_ascii);
+				strcat(transfer_data, minute_ascii);
+				strcat(transfer_data, second_ascii);
+				*/
+				usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+				usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
+				usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+								
+			break;
+			
+			default:
+			
+			// 			need to figure out which statements/stage to enter if this occurs.
+			// 			It will be dependent on the error message.
+			// 			Go to sleep?
+			// 			Measure again?
+			// 			Transmit again?
+			// 			Other?
+			
+			controller_next_state = READ_EXT_DATA;
+			//tx_active = 0;
+			break;
+		}
+		
+		controller_state = controller_next_state;
+			
 	}
 	
 	
-	//usart_putchar(USART_SERIAL_EXAMPLE, 0x41);
-	tx_active = 1;
+	//Tx/////////////////////////////////////////////////////////////////////////////////////////
+	gprs_states_t gprs_state = AT; //CIPSHUT_INIT;
+	gprs_states_t gprs_next_state = gprs_state;
+	
+	//tx_active = 1;
 	while (tx_active == 1) {
 		
 		//Configuring the GPRS state machine. Follow specification from flow chart.
@@ -387,9 +621,11 @@ int main(void)
 				//tx_active = 0; //debug
 				
 				usart_tx_at(USART_SERIAL_SIM900, AT_AT); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
-								
-				//delay_s(1);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -398,9 +634,11 @@ int main(void)
 				//tx_active = 0; //debug
 				
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
-				
-				//delay_s(1);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -410,9 +648,11 @@ int main(void)
 				//tx_active = 0; //debug
 				
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTATUS); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
-				
-				//delay_s(1);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -422,9 +662,11 @@ int main(void)
 				//tx_active = 0; //debug
 								
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIPMUX); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
-				
-				//delay_s(1);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -438,9 +680,11 @@ int main(void)
 					//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CSTT[i]);
 					i++;
 				}
-				status_at = at_response(USART_SERIAL_SIM900);
-				
-				//delay_s(1);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -449,9 +693,11 @@ int main(void)
 				gprs_next_state = CIFSR;
 				
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIICR); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
-				
-				//delay_s(3);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -460,8 +706,11 @@ int main(void)
 				gprs_next_state = CIPSTART;
 				
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIFSR); //return IP
-				status_at = at_response(USART_SERIAL_SIM900);
-				
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					//tx_active = 0; //stop Tx.
+				}
 				delay_s(1); //for safety, could add this response table as well.
 				
 				break;
@@ -478,9 +727,12 @@ int main(void)
 					//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CIPSTART[i]);
 					i++;
 				}
-				status_at = at_response(USART_SERIAL_SIM900); //WHY DOES THIS ONE FAIL???????
-								
-				delay_s(3); //add check for CONNECT before removing this one.
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					//tx_active = 0; //stop Tx.
+				}				
+				delay_s(3); //for safety, add check for CONNECT before removing this one.
 				
 				break;
 			
@@ -490,25 +742,36 @@ int main(void)
 				
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSEND); //return >
 				delay_s(1);
-				char* AT_MESSAGE2 = "0 0 0 512 1023 125";
-				//usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE2);
-				//void mqtt_connect();
+				
+				//char* AT_MESSAGE2 = "2213 10:33:22";
+				char* AT_MESSAGE2 = transfer_data;
+				//char* AT_MESSAGE2 = 0x17;
+				
 				mqtt_packet(AT_MESSAGE2);
+				//mqtt_packet(loadcell_result);
+				//usart_putchar(USART_SERIAL_EXAMPLE, 0x31);
 				delay_s(1);
 				usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
-				
-				//delay_s(1);
-				
+				//usart_putchar(USART_SERIAL_EXAMPLE, 0x32);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
+				//usart_putchar(USART_SERIAL_EXAMPLE, 0x33);
 				break;
 			
 			
 			case CIPSHUT: 
-				//gprs_next_state = CIPSHUT_INIT;
+				gprs_next_state = CIPSHUT_INIT;
 				tx_active = 0; //done for now...
 							
 				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT); //return OK
-				status_at = at_response(USART_SERIAL_SIM900);
+				if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+					tx_active = 0; //stop Tx.
+				}
 				
 				break;
 			
@@ -530,6 +793,7 @@ int main(void)
 		gprs_state = gprs_next_state;
 		
 	}
+	////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	led_blink(1);
 	

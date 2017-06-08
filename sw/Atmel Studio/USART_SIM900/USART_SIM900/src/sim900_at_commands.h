@@ -53,8 +53,12 @@ char *AT_CIPSTART[] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SE
 #define RESPONSE_HEADER "\r\n"
 #define RESPONSE_FOOTER "\r\n"
 #define RESPONSE_OK "OK"
+#define RESPONSE_ERROR "\r\nTIMEOUT ERROR\r\n"
 #define O_UINT8 0x4f
 #define K_UINT8 0x4b
+
+//define other text commands
+#define SPACE " "
 
 
 #endif /* SIM900_AT_COMMANDS_H_ */

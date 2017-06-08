@@ -2,6 +2,12 @@
 # Automatically-generated file. Do not edit or delete the file
 ################################################################################
 
+src\ASF\common\services\sleepmgr\xmega\sleepmgr.c
+
+src\ASF\xmega\drivers\adc\adc.c
+
+src\ASF\xmega\drivers\adc\xmega_aau\adc_aau.c
+
 src\MQTTConnectClient.c
 
 src\MQTTConnectServer.c
