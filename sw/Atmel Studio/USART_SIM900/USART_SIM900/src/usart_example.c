@@ -775,7 +775,7 @@ int main(void)
 	board_init();
 	//pmic_init(); //needed for TC ASF code. Check if needed in real implementation.
 	PMIC.CTRL = 0x01; //low level interrupt
-	sysclk_init();
+	//sysclk_init(); //fucks up the at_response....AHGHHHHHHHHHHHHH
 	
 	//LED setup
 	PORTQ.DIR |= (1<<3);
@@ -793,6 +793,8 @@ int main(void)
 		.stopbits = USART_SERIAL_STOP_BIT
 	};
 	
+	///////////////////////////////
+	
 	usart_init_rs232(USART_SERIAL_EXAMPLE, &USART_SERIAL_OPTIONS);
 	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_OPTIONS);
 	
@@ -806,7 +808,7 @@ int main(void)
 	reset_tx_data(&tx_data);
 	
 	//RTC
-	
+	/*
 	sleepmgr_init();
 	rtc_init_period(TS); //using RTC as sampler timer.
 	cpu_irq_enable();
@@ -820,8 +822,60 @@ int main(void)
 		sleepmgr_enter_sleep();
 		//controller_execute_debug();
 	}
+	*/
 	
 	
+	//DEBUG M95
+	sei();
+	#define  AT_ATI  "AT\r"
+	
+	usart_tx_at(USART_SERIAL_EXAMPLE, AT_ATI);
+	
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_ATI);
+	if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+				}
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_CMGF);
+	if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+				}
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_CMGS);
+	if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+				}
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE);
+	if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+				}
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	
+	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
+	if (at_response(USART_SERIAL_SIM900)) //if timeout
+				{
+					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+				}
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	
+	
+	while (1)
+	{
+		delay_s(10);
+		
+		
+		//nop
+	}
+	//////////////////////////////////////////////////
 	
 	
 	
