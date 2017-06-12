@@ -144,10 +144,13 @@ typedef enum {
 	RX_DATA
 } controller_states_t;
 
+//define states before start
+controller_states_t controller_state = MEASURE; //CHANGE IN FINAL.
+
 //sampling and storage
 static const uint16_t TS = 5; //actual sampling in seconds
-static const uint16_t TTX = 60; //actual transfer rate in seconds
-static const uint16_t TAVG = 60; //actual averaging time in seconds
+static const uint16_t TTX = 20; //actual transfer rate in seconds
+static const uint16_t TAVG = 20; //actual averaging time in seconds
 
 //uint16_t accu_data[3600]; //allocating internal accumulation storage.
 uint32_t accu_data = 0; //allocating internal accumulation storage.
@@ -157,7 +160,17 @@ uint16_t avg_data = 0;
 uint16_t min_data = MIN_DATA_RESET;
 uint16_t max_data = 0;
 uint16_t tran_data = 0;
-//uint16_t avg_data[4]; //avg, min, max, tran => data to be transferred to external memory and over air.
+
+#define POSITION_PREV 0
+#define POSITION_TRAN_PREV 1
+#define POSITION_TRAN_MAX 2
+#define POSITION_AVG 3
+#define POSITION_MIN 4
+#define POSITION_MAX 5
+//#define POSITION_xxx 6 //reserved.
+#define POSITION_ACCU_CNT 7
+#define TX_DATA_SIZE 9 //sum of the above +1.
+uint16_t tx_data[TX_DATA_SIZE]; //prev, prev_tran, tran_max, avg, min, max => data to be transferred to external memory and over air.
 
 //status and modes
 #define OK 0
@@ -168,7 +181,10 @@ uint16_t tran_data = 0;
 volatile uint8_t status_at = 0;
 volatile uint8_t status_at_timeout = 0;
 volatile uint8_t tx_active = 0;
+volatile uint8_t controller_active = 0;
 
+//interrupt
+#define INT_LEVEL_LOW 0x01
 
 //timers
 #define AT_TIMEOUT_TC TCC0 //define AT command timeout counter.
@@ -180,6 +196,37 @@ volatile uint8_t tx_active = 0;
 //ADC
 #define ADC_LC ADCA //define ADC A for load cell
 #define ADC_LC_CH ADC_CH0 //define channel 0 for load cell measurements.
+
+//data variables
+	uint16_t loadcell_adc_result = 0;
+	uint16_t loadcell_adc_result_prev = 0;
+	int16_t loadcell_adc_result_tran = 0; //signed due to difference in both directions
+	int16_t loadcell_adc_result_tran_prev = 0; //signed due to difference in both directions
+	int16_t loadcell_adc_result_tran_max = 0; //signed due to difference in both directions
+	
+	int loadcell_adc_result_low;
+	int loadcell_adc_result_mid;
+	int loadcell_adc_result_hi;
+	
+	char loadcell_adc_result_ascii[5] = "";
+	char loadcell_adc_result_min_ascii[5] = "";
+	char loadcell_adc_result_max_ascii[5] = "";
+	char loadcell_adc_result_tran_ascii[5] = "";
+	uint8_t year = 0;
+	uint8_t month = 0;
+	uint8_t day = 0;
+	uint8_t hour = 0;
+	uint8_t minute = 0;
+	uint8_t second = 0;
+	char year_ascii[3] = "";
+	char month_ascii[3] = "";
+	char day_ascii[3] = "";
+	char hour_ascii[3] = "";
+	char minute_ascii[3] = "";
+	char second_ascii[3] = "";
+	#define TRANSFER_DATA_SIZE 64
+	char transfer_data[TRANSFER_DATA_SIZE] = ""; //currently 45 if sent as text.
+////////////////////////////////////////////////////////////////////////////////////
 
 //Functions declarations
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
@@ -260,6 +307,20 @@ void led_blink(uint8_t on_time) {
 	PORTQ.OUT |= (1<<3);
 	delay_s(on_time);
 }
+
+void rtc_init_period(uint16_t period)
+{
+	sysclk_enable_module(SYSCLK_PORT_GEN, SYSCLK_RTC);
+	RTC.PER = period; 0x0001; //0xffff;
+	RTC.CNT = 0;
+	/* Since overflow interrupt is needed all the time we limit sleep to
+	 * power-save.
+	 */
+	sleepmgr_lock_mode(SLEEPMGR_PSAVE);
+	RTC.INTCTRL |= INT_LEVEL_LOW;
+	RTC.CTRL = RTC_PRESCALER_DIV1024_gc;
+}
+
 
 void at_timeout_start() {
 	
@@ -365,11 +426,335 @@ uint16_t adc_result_average (uint8_t num_avg) {
 	return res;	
 }
 
+void controller_execute_debug() {
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+}
 
+uint16_t controller_state_machine (controller_states_t state, uint32_t accu_data, uint16_t accu_data_cnt)
+{
+	//controller_states_t controller_state = state;
+    //controller_states_t controller_next_state = controller_state;
+     
+	controller_active = 1;     
+     
+    while(controller_active == 1) {
+         
+         
+        //Configuring the controller state machine. Follow specification from flow chart.
+        switch(state) //compare against controller state????
+        {
+            case READ_EXT_DATA:
+                //controller_next_state = MEASURE;
+             
+            break;
+             
+            case MEASURE:
+                 
+                //loadcell_adc_result = 1203;           
+                loadcell_adc_result = adc_result_average(9);
+                                 
+                loadcell_adc_result_tran = loadcell_adc_result - loadcell_adc_result_prev;
+                loadcell_adc_result_prev = loadcell_adc_result;
+                 
+                //debug
+				/*
+                char debugdata[5];
+                itoa(loadcell_adc_result, debugdata, 10);
+                usart_tx_at(USART_SERIAL_EXAMPLE, debugdata);
+                usart_tx_at(USART_SERIAL_EXAMPLE, SPACE);
+                */
+                 
+                if (loadcell_adc_result<min_data)
+                {
+                    min_data = loadcell_adc_result;
+                }
+                if (loadcell_adc_result>max_data)
+                {
+                    max_data = loadcell_adc_result;
+                }
+                if ((abs(loadcell_adc_result_tran) > abs(loadcell_adc_result_tran_max)) & accu_data_cnt != 0) //first step is not valid due to only one value.
+                {
+                    loadcell_adc_result_tran_max = loadcell_adc_result_tran;
+                }
+                 
+                //controller_next_state = TX_DATA; //actually calc....or???
+				controller_active = 0;
+                
+                /*
+                if (counter >= (TAVG/TS) )
+                {
+                    avg_data = accu_data/accu_data_cnt;
+                    controller_next_state = TX_DATA; //actually calc....or???
+                    accu_data = 0;
+                    accu_data_cnt = 0; //reset counter
+                    loadcell_adc_result_prev = 0;
+                    loadcell_adc_result_tran = 0;
+                }
+                else
+                {
+                    controller_next_state = MEASURE;
+                }
+                */
+				return loadcell_adc_result;
+            break;
+             
+            case CALC:
+				avg_data = accu_data/accu_data_cnt;
+				
+				return avg_data;
+				break;
+             
+            case TX_DATA:
+                //controller_next_state = RX_DATA;
+                itoa(avg_data, loadcell_adc_result_ascii, 10); //convert to hex to lower transferred bytes.
+                itoa(min_data, loadcell_adc_result_min_ascii, 10); //convert to hex to lower transferred bytes.
+                itoa(max_data, loadcell_adc_result_max_ascii, 10); //convert to hex to lower transferred bytes.
+                itoa(loadcell_adc_result_tran_max, loadcell_adc_result_tran_ascii, 10); //convert to hex to lower transferred bytes.
+                min_data = MIN_DATA_RESET; //reset min data
+                max_data = 0; //reset max data
+                loadcell_adc_result_tran_max = 0;
+                 
+                 
+                year = 17;
+                itoa(year, year_ascii,16);
+                month = 6;
+                itoa(month, month_ascii,16);
+                day = 7;
+                itoa(day, day_ascii,16);
+                hour = 13;
+                itoa(hour, hour_ascii,16);
+                minute++;
+                itoa(minute, minute_ascii, 16);
+                second = 0;
+                itoa(second, second_ascii,16);
+                 
+                strcpy(transfer_data, loadcell_adc_result_ascii);
+                strcat(transfer_data, ",");
+                strcat(transfer_data, loadcell_adc_result_min_ascii);
+                strcat(transfer_data, ",");
+                strcat(transfer_data, loadcell_adc_result_max_ascii);
+                strcat(transfer_data, ",");
+                strcat(transfer_data, loadcell_adc_result_tran_ascii);
+                /*
+                strcat(transfer_data, ",");
+                strcat(transfer_data, year_ascii);
+                strcat(transfer_data, month_ascii);
+                strcat(transfer_data, day_ascii);
+                strcat(transfer_data, hour_ascii);
+                strcat(transfer_data, minute_ascii);
+                strcat(transfer_data, second_ascii);
+                */
+                usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+                usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
+                usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+                                 
+            break;
+             
+            default:
+             
+            //          need to figure out which statements/stage to enter if this occurs.
+            //          It will be dependent on the error message.
+            //          Go to sleep?
+            //          Measure again?
+            //          Transmit again?
+            //          Other?
+             
+            //controller_next_state = READ_EXT_DATA;
+            controller_active = 0;
+            break;
+        }
+         
+        //controller_state = controller_next_state;
+             
+    }
+	
+}
+
+uint16_t controller_measure(uint8_t nr_samples, uint16_t array[TX_DATA_SIZE]) {
+	
+	//measure with adc
+	uint16_t adc_result = 0;
+	adc_result = adc_result_average(nr_samples);
+	//adc_result = 1234;
+	////////////////////////////////////////////////
+	
+	//debug
+	sprintf(transfer_data, "%d", adc_result); //convert to hex to lower transferred bytes.
+	
+		/*
+		strcpy(debug_text, debug_byte);
+		strcat(debug_text, ",");
+		strcat(debug_text, ",");
+		*/
+		usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
+	////////////////////////////////////////////////////////////////	
+	
+	//find tran
+	uint16_t tran = 0;	 
+	tran = adc_result - array[POSITION_PREV]; //tran = current - previous
+	if ((abs(tran) > abs(array[POSITION_TRAN_MAX])) & (array[POSITION_ACCU_CNT] > 0)) //first step is not valid due to only one value.
+    {
+        array[POSITION_TRAN_MAX] = tran; //store new tran max.
+		
+    }
+	array[POSITION_PREV] = adc_result; //store current adc value as previous for next tran calculation.
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+    //debug
+	/*
+    char debugdata[5];
+    itoa(loadcell_adc_result, debugdata, 10);
+    usart_tx_at(USART_SERIAL_EXAMPLE, debugdata);
+    usart_tx_at(USART_SERIAL_EXAMPLE, SPACE);
+    */
+	
+	//find min and max
+    if (adc_result < array[POSITION_MIN])
+    {
+        array[POSITION_MIN] = adc_result; //store new min value.
+    }
+    if (adc_result > array[POSITION_MAX])
+    {
+        array[POSITION_MAX] = adc_result; //Store new max.
+    }
+    
+         
+	return adc_result; //return current measurement.  
+}
+
+uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
+	 uint16_t avg = 0;
+	 
+	 avg = data/cnt;
+	 return avg;
+}
+
+void controller_tx(uint16_t array[TX_DATA_SIZE]) {
+	
+	//controller_next_state = RX_DATA;
+    itoa(array[POSITION_AVG], loadcell_adc_result_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(array[POSITION_MIN], loadcell_adc_result_min_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(array[POSITION_MAX], loadcell_adc_result_max_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(array[POSITION_TRAN_MAX], loadcell_adc_result_tran_ascii, 10); //convert to hex to lower transferred bytes.
+    
+	//reset parameters
+	array[0] = 0;
+	array[1] = 0;
+	array[2] = 0;
+	array[3] = 0;
+	array[4] = 0;
+	array[5] = 0;
+           
+                 
+    year = 17;
+    itoa(year, year_ascii,16);
+    month = 6;
+    itoa(month, month_ascii,16);
+    day = 7;
+    itoa(day, day_ascii,16);
+    hour = 13;
+    itoa(hour, hour_ascii,16);
+    minute++;
+    itoa(minute, minute_ascii, 16);
+    second = 0;
+    itoa(second, second_ascii,16);
+                 
+    strcpy(transfer_data, loadcell_adc_result_ascii);
+    strcat(transfer_data, ",");
+    strcat(transfer_data, loadcell_adc_result_min_ascii);
+    strcat(transfer_data, ",");
+    strcat(transfer_data, loadcell_adc_result_max_ascii);
+    strcat(transfer_data, ",");
+    strcat(transfer_data, loadcell_adc_result_tran_ascii);
+	strcat(transfer_data, ",");
+    /*
+    strcat(transfer_data, ",");
+    strcat(transfer_data, year_ascii);
+    strcat(transfer_data, month_ascii);
+    strcat(transfer_data, day_ascii);
+    strcat(transfer_data, hour_ascii);
+    strcat(transfer_data, minute_ascii);
+    strcat(transfer_data, second_ascii);
+    */
+
+    usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+	int i=0;
+	while(transfer_data[i] != 0x00) {
+		usart_putchar(USART_SERIAL_EXAMPLE, transfer_data[i]);
+		i++;
+	}
+    //usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
+    usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+                
+}
+
+void reset_tx_data(uint16_t array[TX_DATA_SIZE]) {
+	array[POSITION_PREV] = 0;
+	array[POSITION_TRAN_PREV] = 0;
+	array[POSITION_TRAN_MAX] = 0;
+	array[POSITION_AVG] = 0;
+	array[POSITION_MIN] = MIN_DATA_RESET;
+	array[POSITION_MAX] = 0;
+	array[POSITION_ACCU_CNT] = 0;
+	
+}
 
 ISR(TCC0_OVF_vect) {
 	at_timeout_stop();
 	status_at_timeout = 1;
+}
+
+
+ISR(RTC_OVF_vect)
+{
+	cli(); //disable interrupts. Other way of disabling and resetting?
+	//rtc_data.counter_high++;
+	
+	//led_blink(1);
+	
+	
+	if (controller_state == MEASURE)
+	{
+		accu_data += controller_measure(9, &tx_data); //measure with averaging, and accumulate.
+	}
+	
+	tx_data[POSITION_ACCU_CNT]++; //increase accumulation counter.
+				
+	if (tx_data[POSITION_ACCU_CNT] > (TAVG/TS)) //if accumulation limit is reached.
+	{
+		tx_data[POSITION_AVG] = controller_calc_avg(accu_data, tx_data[POSITION_ACCU_CNT]); //calc and store average.
+				
+		//reset parameters
+		accu_data = 0;
+		tx_data[POSITION_ACCU_CNT] = 0;
+		
+		controller_state = TX_DATA;
+		
+		//debug
+		/*
+		itoa(avg_data, loadcell_adc_result_ascii, 10); //convert to hex to lower transferred bytes.
+		strcpy(transfer_data, loadcell_adc_result_ascii);
+		usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+		usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
+		usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
+		*/
+	}
+	
+	if (controller_state == TX_DATA)
+	{
+		controller_tx(&tx_data);
+		reset_tx_data(&tx_data);
+		
+		controller_state = MEASURE;
+		
+	}
+	
+	//usart_putchar(USART_SERIAL_EXAMPLE, 0x30+accu_data_cnt);
+	//WRITE RTC value = 0!
+	RTC.CNT = 0;
+	sei(); //enable interrupt, go to sleep
 }
 
 
@@ -390,7 +775,7 @@ int main(void)
 	board_init();
 	//pmic_init(); //needed for TC ASF code. Check if needed in real implementation.
 	PMIC.CTRL = 0x01; //low level interrupt
-	//sysclk_init();
+	sysclk_init();
 	
 	//LED setup
 	PORTQ.DIR |= (1<<3);
@@ -398,34 +783,6 @@ int main(void)
 	
 	//ADC setup
 	adc_init();
-	uint16_t loadcell_adc_result = 0;
-	uint16_t loadcell_adc_result_prev = 0;
-	int16_t loadcell_adc_result_tran = 0; //signed due to difference in both directions
-	int16_t loadcell_adc_result_tran_prev = 0; //signed due to difference in both directions
-	int16_t loadcell_adc_result_tran_max = 0; //signed due to difference in both directions
-	
-	int loadcell_adc_result_low;
-	int loadcell_adc_result_mid;
-	int loadcell_adc_result_hi;
-	
-	char loadcell_adc_result_ascii[5] = "";
-	char loadcell_adc_result_min_ascii[5] = "";
-	char loadcell_adc_result_max_ascii[5] = "";
-	char loadcell_adc_result_tran_ascii[5] = "";
-	uint8_t year = 0;
-	uint8_t month = 0;
-	uint8_t day = 0;
-	uint8_t hour = 0;
-	uint8_t minute = 0;
-	uint8_t second = 0;
-	char year_ascii[3] = "";
-	char month_ascii[3] = "";
-	char day_ascii[3] = "";
-	char hour_ascii[3] = "";
-	char minute_ascii[3] = "";
-	char second_ascii[3] = "";
-	char transfer_data[64] = ""; //currently 45 if sent as text.
-	
 	adc_enable(&ADC_LC); //Later??? By interrupt?
 		
 	// USART for debug (COM port)
@@ -436,19 +793,8 @@ int main(void)
 		.stopbits = USART_SERIAL_STOP_BIT
 	};
 	
-	
-	//USART for SIM900
-	static usart_rs232_options_t USART_SERIAL_SIM900_OPTIONS = {
-		.baudrate = USART_SERIAL_SIM900_BAUDRATE,
-		.charlength = USART_SERIAL_SIM900_CHAR_LENGTH,
-		.paritytype = USART_SERIAL_SIM900_PARITY,
-		.stopbits = USART_SERIAL_SIM900_STOP_BIT
-	};
-
-	// Initialize usart driver in RS232 mode
 	usart_init_rs232(USART_SERIAL_EXAMPLE, &USART_SERIAL_OPTIONS);
-	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_SIM900_OPTIONS);
-	
+	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_OPTIONS);
 	
 	at_command_timeout_setup();
 	//sei();
@@ -456,161 +802,34 @@ int main(void)
 	//WDT setup
 	
 	
-	/*
-	//INIT TC
-	tc_enable(&AT_TIMEOUT_TC);
-//	tc_set_overflow_interrupt_callback(&AT_TIMEOUT_TC, at_command_timeout);
-	tc_set_wgm(&AT_TIMEOUT_TC, TC_WG_NORMAL); 
-	tc_write_period(&AT_TIMEOUT_TC, 1000); 
-	tc_set_overflow_interrupt_level(&AT_TIMEOUT_TC, TC_INT_LVL_LO);
-	cpu_irq_enable();  
-	tc_write_clock_source(&AT_TIMEOUT_TC, TC_CLKSEL_DIV1024_gc); //sysclk divided.
-	///////////////////////////////////////////////
-	//tc_disable(&AT_TIMEOUT_TC);
-	//at_timeout_stop();
-	*/
+	//reset data
+	reset_tx_data(&tx_data);
+	
+	//RTC
+	
+	sleepmgr_init();
+	rtc_init_period(TS); //using RTC as sampler timer.
+	cpu_irq_enable();
 	
 	
 	
-	controller_states_t controller_state = READ_EXT_DATA;
-	controller_states_t controller_next_state = controller_state;
 	
-	tx_active = 1;
-	while(tx_active) {
-		
-		
-		
-		delay_s(1); //1 ~ 6s
-		
-		
-		
-		//Configuring the controller state machine. Follow specification from flow chart.
-		switch(controller_state) //compare against controller state????
-		{
-			case READ_EXT_DATA:
-				controller_next_state = MEASURE;
-			
-			break;
-			
-			case MEASURE:
-				
-				//loadcell_adc_result = 1203;			
-				loadcell_adc_result = adc_result_average(9);
-				accu_data += loadcell_adc_result; //accumulate
-				
-				
-				loadcell_adc_result_tran = loadcell_adc_result - loadcell_adc_result_prev;
-				loadcell_adc_result_prev = loadcell_adc_result;
-				
-				//debug
-				char debugdata[5];
-				itoa(loadcell_adc_result, debugdata, 10);
-				usart_tx_at(USART_SERIAL_EXAMPLE, debugdata);
-				usart_tx_at(USART_SERIAL_EXAMPLE, SPACE);
-				
-				
-				if (loadcell_adc_result<min_data)
-				{
-					min_data = loadcell_adc_result;
-				}
-				if (loadcell_adc_result>max_data)
-				{
-					max_data = loadcell_adc_result;
-				}
-				if ((abs(loadcell_adc_result_tran) > abs(loadcell_adc_result_tran_max)) & accu_data_cnt != 0) //first step is not valid due to only one value.
-				{
-					loadcell_adc_result_tran_max = loadcell_adc_result_tran;
-				}
-				
-				
-				accu_data_cnt++;
-				if (accu_data_cnt >= (TAVG/TS) )
-				{
-					avg_data = accu_data/accu_data_cnt;
-					controller_next_state = TX_DATA; //actually calc....or???
-					accu_data = 0;
-					accu_data_cnt = 0; //reset counter
-					loadcell_adc_result_prev = 0;
-					loadcell_adc_result_tran = 0;
-				}
-				else
-				{
-					controller_next_state = MEASURE;
-				}
-			break;
-			
-			case CALC:
-			
-			case TX_DATA:
-				controller_next_state = RX_DATA;
-				itoa(avg_data, loadcell_adc_result_ascii, 10); //convert to hex to lower transferred bytes.
-				itoa(min_data, loadcell_adc_result_min_ascii, 10); //convert to hex to lower transferred bytes.
-				itoa(max_data, loadcell_adc_result_max_ascii, 10); //convert to hex to lower transferred bytes.
-				itoa(loadcell_adc_result_tran_max, loadcell_adc_result_tran_ascii, 10); //convert to hex to lower transferred bytes.
-				min_data = MIN_DATA_RESET; //reset min data
-				max_data = 0; //reset max data
-				loadcell_adc_result_tran_max = 0;
-				
-				
-				year = 17;
-				itoa(year, year_ascii,16);
-				month = 6;
-				itoa(month, month_ascii,16);
-				day = 7;
-				itoa(day, day_ascii,16);
-				hour = 13;
-				itoa(hour, hour_ascii,16);
-				minute++;
-				itoa(minute, minute_ascii, 16);
-				second = 0;
-				itoa(second, second_ascii,16);
-				
-				strcpy(transfer_data, loadcell_adc_result_ascii);
-				strcat(transfer_data, ",");
-				strcat(transfer_data, loadcell_adc_result_min_ascii);
-				strcat(transfer_data, ",");
-				strcat(transfer_data, loadcell_adc_result_max_ascii);
-				strcat(transfer_data, ",");
-				strcat(transfer_data, loadcell_adc_result_tran_ascii);
-				/*
-				strcat(transfer_data, ",");
-				strcat(transfer_data, year_ascii);
-				strcat(transfer_data, month_ascii);
-				strcat(transfer_data, day_ascii);
-				strcat(transfer_data, hour_ascii);
-				strcat(transfer_data, minute_ascii);
-				strcat(transfer_data, second_ascii);
-				*/
-				usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-				usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
-				usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-								
-			break;
-			
-			default:
-			
-			// 			need to figure out which statements/stage to enter if this occurs.
-			// 			It will be dependent on the error message.
-			// 			Go to sleep?
-			// 			Measure again?
-			// 			Transmit again?
-			// 			Other?
-			
-			controller_next_state = READ_EXT_DATA;
-			//tx_active = 0;
-			break;
-		}
-		
-		controller_state = controller_next_state;
-			
+	
+	while (1)
+	{
+		sleepmgr_enter_sleep();
+		//controller_execute_debug();
 	}
+	
+	
+	
 	
 	
 	//Tx/////////////////////////////////////////////////////////////////////////////////////////
 	gprs_states_t gprs_state = AT; //CIPSHUT_INIT;
 	gprs_states_t gprs_next_state = gprs_state;
 	
-	//tx_active = 1;
+	tx_active = 0;
 	while (tx_active == 1) {
 		
 		//Configuring the GPRS state machine. Follow specification from flow chart.
