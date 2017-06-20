@@ -875,334 +875,90 @@ int main(void)
 	#define ATV0 "ATV0\r" //response format is numbers
 	#define ATV1 "ATV1\r" //response format is text
 	
-	uint8_t mychar = 0;
-	
-	/*
-	i=0;
-	while (i<2)
-	{
-	usart_tx_at(USART_SERIAL_SIM900, ATV0); //return +QNSTATUS: n, where 0 is ok.
-	mychar = at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	delay_s(1);
-	i++;
-	}
-	*/
-	//usart_putchar(USART_SERIAL_EXAMPLE, mychar);
-	
+	uint8_t tx_status = 0;
 		
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 		
 	//Wait for GSM network status
-	mychar = 1;
- 	while (mychar != 0)
+	tx_status = 1;
+ 	while (tx_status != 0)
  	{
 		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
-		mychar  = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 		delay_s(1);
 	}
 	
-	//delay_s(2);
-	
-	//usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK. Perhaps not needed if waking up from power down.
-	//if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-		
 	
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIFGCNT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QICSGP); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_ms(300); //max response time 300ms.
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIMUX); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIMODE); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIDNSIP); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIREGAPP); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_QISTAT); //return OK
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIACT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
 		
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QILOCIP); //return OK //fix response
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
 	
 	//CHECK IP STATUS
-	//mychar = 0;
-	//while (mychar != 0x30 || mychar != 0x35 || mychar != 0x37)
-	//{
-// 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-// 		mychar = at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//}
 	
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_QIOPEN); //return OK
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIOPEN); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-	//at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISEND); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
-		
+			
 	char* AT_MESSAGE2 = "2213 10:33:22";
 		
 	mqtt_packet(AT_MESSAGE2);
 	delay_ms(300);
 		
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
-	//usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK REMOVE?????????????
-	//if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIDEACT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-	//delay_s(1);
-	
 	
 	//radio power down
 	radio_power_down();
 	
 	while (1)
 	{
-		
 		led_blink(1);
-		//usart_putchar(USART_SERIAL_EXAMPLE, 0x30);
-		//usart_putchar(USART_SERIAL_SIM900, 0x30);
-		
-		//nop
 	}
 	//////////////////////////////////////////////////
 	
 	
 	
-	//Tx/////////////////////////////////////////////////////////////////////////////////////////
-	
-	/*
-	gprs_states_t gprs_state = AT; //CIPSHUT_INIT;
-	gprs_states_t gprs_next_state = gprs_state;
-	
-	tx_active = 0;
-	while (tx_active == 1) {
-		
-		//Configuring the GPRS state machine. Follow specification from flow chart.
-		switch(gprs_state) //compare against controller state????
-		{
-			case AT:
-				gprs_next_state = CIPSHUT_INIT;
-				//tx_active = 0; //debug
-				
-				usart_tx_at(USART_SERIAL_SIM900, AT_AT); //return OK
-				
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-			case CIPSHUT_INIT: 
-				gprs_next_state = CIPSTATUS;
-				//tx_active = 0; //debug
-				
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT); //return OK
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-						
-			case CIPSTATUS: 
-				gprs_next_state = CIPMUX;
-				//tx_active = 0; //debug
-				
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTATUS); //return OK
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-										
-			case CIPMUX: 
-				gprs_next_state = CSTT;
-				//tx_active = 0; //debug
-								
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIPMUX); //return OK
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-			
-			case CSTT: 
-				gprs_next_state = CIICR;
-				//tx_active = 0; //debug
-				while (i < LEN_CSTT)
-				{
-					usart_tx_at(USART_SERIAL_SIM900, AT_CSTT[i]); //return OK
-					//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CSTT[i]);
-					i++;
-				}
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-						
-			case CIICR: 
-				gprs_next_state = CIFSR;
-				
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIICR); //return OK
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-						
-			case CIFSR: 
-				gprs_next_state = CIPSTART;
-				
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIFSR); //return IP
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					//tx_active = 0; //stop Tx.
-				}
-				delay_s(1); //for safety, could add this response table as well.
-				
-				break;
-			
-			
-			case CIPSTART: 
-				gprs_next_state = CIPSEND;
-				//tx_active = 0; //debug
-				
-				i = 0;
-				while (i < LEN_CIPSTART)
-				{
-					usart_tx_at(USART_SERIAL_SIM900, AT_CIPSTART[i]); //return several OK
-					//usart_tx_at(USART_SERIAL_EXAMPLE, AT_CIPSTART[i]);
-					i++;
-				}
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					//tx_active = 0; //stop Tx.
-				}				
-				delay_s(3); //for safety, add check for CONNECT before removing this one.
-				
-				break;
-			
-						
-			case CIPSEND: 
-				gprs_next_state = CIPSHUT;
-				
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSEND); //return >
-				delay_s(1);
-				
-				//char* AT_MESSAGE2 = "2213 10:33:22";
-				char* AT_MESSAGE2 = transfer_data;
-				//char* AT_MESSAGE2 = 0x17;
-				
-				mqtt_packet(AT_MESSAGE2);
-				//mqtt_packet(loadcell_result);
-				//usart_putchar(USART_SERIAL_EXAMPLE, 0x31);
-				delay_s(1);
-				usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
-				//usart_putchar(USART_SERIAL_EXAMPLE, 0x32);
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				//usart_putchar(USART_SERIAL_EXAMPLE, 0x33);
-				break;
-			
-			
-			case CIPSHUT: 
-				gprs_next_state = CIPSHUT_INIT;
-				tx_active = 0; //done for now...
-							
-				usart_tx_at(USART_SERIAL_SIM900, AT_CIPSHUT); //return OK
-				if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-					tx_active = 0; //stop Tx.
-				}
-				
-				break;
-			
-						
-			default:
-			
-// 			need to figure out which statements/stage to enter if this occurs.
-// 			It will be dependent on the error message. 
-// 			Go to sleep?
-// 			Measure again?
-// 			Transmit again?
-// 			Other?
-			
-			gprs_next_state = CIPSHUT_INIT;
-			tx_active = 0;
-			break;
-		}
-		
-		gprs_state = gprs_next_state;
-		
-	}
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	led_blink(1);
-	
-	//done
-	while (1)
-	{
-		//nop
-	}
-	*/
 }

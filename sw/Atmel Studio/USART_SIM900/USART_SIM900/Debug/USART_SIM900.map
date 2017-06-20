@@ -2793,7 +2793,7 @@ END GROUP
  .debug_frame   0x00000a04      0x150 src/ASF/xmega/drivers/usart/usart.o
  .debug_frame   0x00000b54      0x3d4 src/usart_example.o
 
-.debug_str      0x00000000    0x359f3
+.debug_str      0x00000000    0x359ef
  *(.debug_str)
  .debug_str     0x00000000     0x2969 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/XMEGAA_DFP/1.1.68/gcc/dev/atxmega128a1u/avrxmega7/crtatxmega128a1u.o
  .debug_str     0x00002969    0x2ace3 src/ASF/common/services/sleepmgr/xmega/sleepmgr.o
@@ -2816,8 +2816,8 @@ END GROUP
                               0x2d8da (size before relaxing)
  .debug_str     0x00032bac      0xd1c src/ASF/xmega/drivers/usart/usart.o
                               0x2f47d (size before relaxing)
- .debug_str     0x000338c8     0x212b src/usart_example.o
-                              0x32264 (size before relaxing)
+ .debug_str     0x000338c8     0x2127 src/usart_example.o
+                              0x32267 (size before relaxing)
 
 .debug_loc      0x00000000     0x5300
  *(.debug_loc)

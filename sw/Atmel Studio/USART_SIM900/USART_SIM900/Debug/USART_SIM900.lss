@@ -23,13 +23,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
   9 .debug_frame  00000f28  00000000  00000000  0001cac0  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    000359f3  00000000  00000000  0001d9e8  2**0
+ 10 .debug_str    000359ef  00000000  00000000  0001d9e8  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00005300  00000000  00000000  000533db  2**0
+ 11 .debug_loc    00005300  00000000  00000000  000533d7  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 000003a8  00000000  00000000  000586e0  2**3
+ 12 .debug_ranges 000003a8  00000000  00000000  000586d8  2**3
                   CONTENTS, READONLY, DEBUGGING
- 13 .debug_macro  0000c492  00000000  00000000  00058a88  2**0
+ 13 .debug_macro  0000c492  00000000  00000000  00058a80  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -5206,10 +5206,10 @@ static void adc_init(void)
     1ec8:	88 23       	and	r24, r24
     1eca:	ec f7       	brge	.-6      	; 0x1ec6 <main+0xb6>
     1ecc:	e0 ec       	ldi	r30, 0xC0	; 192
-	}
-	*/
-	//usart_putchar(USART_SERIAL_EXAMPLE, mychar);
+	#define ATV0 "ATV0\r" //response format is numbers
+	#define ATV1 "ATV1\r" //response format is text
 	
+	uint8_t tx_status = 0;
 		
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
     1ece:	f7 e0       	ldi	r31, 0x07	; 7
@@ -5225,8 +5225,8 @@ static void adc_init(void)
     1ee0:	6c eb       	ldi	r22, 0xBC	; 188
 		
 	//Wait for GSM network status
-	mychar = 1;
- 	while (mychar != 0)
+	tx_status = 1;
+ 	while (tx_status != 0)
  	{
 		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
     1ee2:	72 e0       	ldi	r23, 0x02	; 2
@@ -5234,7 +5234,7 @@ static void adc_init(void)
     1ee6:	98 e0       	ldi	r25, 0x08	; 8
     1ee8:	ce db       	rcall	.-2148   	; 0x1686 <at_response>
     1eea:	62 e7       	ldi	r22, 0x72	; 114
-		mychar  = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
     1eec:	70 e2       	ldi	r23, 0x20	; 32
     1eee:	80 ea       	ldi	r24, 0xA0	; 160
     1ef0:	98 e0       	ldi	r25, 0x08	; 8
@@ -5250,14 +5250,14 @@ static void adc_init(void)
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 		
 	//Wait for GSM network status
-	mychar = 1;
- 	while (mychar != 0)
+	tx_status = 1;
+ 	while (tx_status != 0)
     1f00:	66 e1       	ldi	r22, 0x16	; 22
-	//delay_s(2);
+		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
+		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		delay_s(1);
+	}
 	
-	//usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK. Perhaps not needed if waking up from power down.
-	//if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
     1f02:	76 e1       	ldi	r23, 0x16	; 22
     1f04:	85 e0       	ldi	r24, 0x05	; 5
@@ -5270,9 +5270,7 @@ static void adc_init(void)
     1f10:	70 e2       	ldi	r23, 0x20	; 32
     1f12:	80 ea       	ldi	r24, 0xA0	; 160
     1f14:	98 e0       	ldi	r25, 0x08	; 8
-		
 	
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIFGCNT); //return OK
     1f16:	05 db       	rcall	.-2550   	; 0x1522 <usart_tx_at>
     1f18:	6c eb       	ldi	r22, 0xBC	; 188
@@ -5283,7 +5281,7 @@ static void adc_init(void)
     1f20:	b2 db       	rcall	.-2204   	; 0x1686 <at_response>
     1f22:	6f e7       	ldi	r22, 0x7F	; 127
     1f24:	70 e2       	ldi	r23, 0x20	; 32
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QICSGP); //return OK
     1f26:	80 ea       	ldi	r24, 0xA0	; 160
     1f28:	98 e0       	ldi	r25, 0x08	; 8
@@ -5296,7 +5294,7 @@ static void adc_init(void)
     1f34:	a8 db       	rcall	.-2224   	; 0x1686 <at_response>
     1f36:	6d e8       	ldi	r22, 0x8D	; 141
     1f38:	70 e2       	ldi	r23, 0x20	; 32
-	//delay_ms(300); //max response time 300ms.
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIMUX); //return OK
     1f3a:	80 ea       	ldi	r24, 0xA0	; 160
     1f3c:	98 e0       	ldi	r25, 0x08	; 8
@@ -5308,7 +5306,7 @@ static void adc_init(void)
     1f46:	98 e0       	ldi	r25, 0x08	; 8
     1f48:	9e db       	rcall	.-2244   	; 0x1686 <at_response>
     1f4a:	65 eb       	ldi	r22, 0xB5	; 181
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIMODE); //return OK
     1f4c:	70 e2       	ldi	r23, 0x20	; 32
     1f4e:	80 ea       	ldi	r24, 0xA0	; 160
@@ -5320,7 +5318,7 @@ static void adc_init(void)
     1f58:	80 ea       	ldi	r24, 0xA0	; 160
     1f5a:	98 e0       	ldi	r25, 0x08	; 8
     1f5c:	94 db       	rcall	.-2264   	; 0x1686 <at_response>
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIDNSIP); //return OK
     1f5e:	61 ec       	ldi	r22, 0xC1	; 193
     1f60:	70 e2       	ldi	r23, 0x20	; 32
@@ -5333,7 +5331,7 @@ static void adc_init(void)
     1f6c:	80 ea       	ldi	r24, 0xA0	; 160
     1f6e:	98 e0       	ldi	r25, 0x08	; 8
     1f70:	8a db       	rcall	.-2284   	; 0x1686 <at_response>
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIREGAPP); //return OK
     1f72:	6e ec       	ldi	r22, 0xCE	; 206
     1f74:	70 e2       	ldi	r23, 0x20	; 32
@@ -5344,8 +5342,7 @@ static void adc_init(void)
     1f7c:	6c eb       	ldi	r22, 0xBC	; 188
     1f7e:	72 e0       	ldi	r23, 0x02	; 2
     1f80:	80 ea       	ldi	r24, 0xA0	; 160
-	//delay_s(1);
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_QISTAT); //return OK
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
     1f82:	98 e0       	ldi	r25, 0x08	; 8
     1f84:	80 db       	rcall	.-2304   	; 0x1686 <at_response>
@@ -5371,7 +5368,6 @@ static void adc_init(void)
     1fa4:	6c eb       	ldi	r22, 0xBC	; 188
     1fa6:	72 e0       	ldi	r23, 0x02	; 2
 		
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QILOCIP); //return OK //fix response
     1fa8:	80 ea       	ldi	r24, 0xA0	; 160
     1faa:	98 e0       	ldi	r25, 0x08	; 8
@@ -5383,11 +5379,9 @@ static void adc_init(void)
     1fb4:	98 e0       	ldi	r25, 0x08	; 8
     1fb6:	b5 da       	rcall	.-2710   	; 0x1522 <usart_tx_at>
     1fb8:	60 e4       	ldi	r22, 0x40	; 64
-// 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-// 		mychar = at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	//}
 	
-	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_QIOPEN); //return OK
+	//CHECK IP STATUS
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIOPEN); //return OK
     1fba:	7c e9       	ldi	r23, 0x9C	; 156
     1fbc:	80 ea       	ldi	r24, 0xA0	; 160
@@ -5400,8 +5394,7 @@ static void adc_init(void)
     1fc8:	98 e0       	ldi	r25, 0x08	; 8
     1fca:	ab da       	rcall	.-2730   	; 0x1522 <usart_tx_at>
     1fcc:	6c eb       	ldi	r22, 0xBC	; 188
-	//at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK
     1fce:	72 e0       	ldi	r23, 0x02	; 2
     1fd0:	80 ea       	ldi	r24, 0xA0	; 160
@@ -5412,7 +5405,7 @@ static void adc_init(void)
     1fd8:	70 e2       	ldi	r23, 0x20	; 32
     1fda:	80 ea       	ldi	r24, 0xA0	; 160
     1fdc:	98 e0       	ldi	r25, 0x08	; 8
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
     1fde:	a1 da       	rcall	.-2750   	; 0x1522 <usart_tx_at>
     1fe0:	60 e4       	ldi	r22, 0x40	; 64
@@ -5425,7 +5418,6 @@ static void adc_init(void)
     1fec:	71 e2       	ldi	r23, 0x21	; 33
     1fee:	80 ea       	ldi	r24, 0xA0	; 160
 
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
     1ff0:	98 e0       	ldi	r25, 0x08	; 8
     1ff2:	97 da       	rcall	.-2770   	; 0x1522 <usart_tx_at>
@@ -5448,8 +5440,7 @@ static void adc_init(void)
     200c:	80 ea       	ldi	r24, 0xA0	; 160
     200e:	98 e0       	ldi	r25, 0x08	; 8
     2010:	3a db       	rcall	.-2444   	; 0x1686 <at_response>
-	//delay_s(1);
-		
+			
 	char* AT_MESSAGE2 = "2213 10:33:22";
 		
 	mqtt_packet(AT_MESSAGE2);
@@ -5465,7 +5456,6 @@ static void adc_init(void)
     2022:	98 e0       	ldi	r25, 0x08	; 8
     2024:	30 db       	rcall	.-2464   	; 0x1686 <at_response>
 		
-	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
     2026:	6f e2       	ldi	r22, 0x2F	; 47
     2028:	71 e2       	ldi	r23, 0x21	; 33
@@ -5480,10 +5470,7 @@ static void adc_init(void)
     2038:	26 db       	rcall	.-2484   	; 0x1686 <at_response>
     203a:	8a e3       	ldi	r24, 0x3A	; 58
     203c:	91 e2       	ldi	r25, 0x21	; 33
-	//delay_s(1);
-	//usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK REMOVE?????????????
-	//if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK
     203e:	92 db       	rcall	.-2268   	; 0x1764 <mqtt_packet>
     2040:	61 ea       	ldi	r22, 0xA1	; 161
@@ -5498,7 +5485,7 @@ static void adc_init(void)
     2050:	98 e0       	ldi	r25, 0x08	; 8
     2052:	67 da       	rcall	.-2866   	; 0x1522 <usart_tx_at>
     2054:	6c eb       	ldi	r22, 0xBC	; 188
-	//delay_s(1);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIDEACT); //return OK
     2056:	72 e0       	ldi	r23, 0x02	; 2
     2058:	80 ea       	ldi	r24, 0xA0	; 160
@@ -5513,8 +5500,6 @@ static void adc_init(void)
     2068:	6c eb       	ldi	r22, 0xBC	; 188
     206a:	72 e0       	ldi	r23, 0x02	; 2
     206c:	80 ea       	ldi	r24, 0xA0	; 160
-	//delay_s(1);
-	
 	
 	//radio power down
 	radio_power_down();
@@ -5523,7 +5508,6 @@ static void adc_init(void)
 	
 	while (1)
 	{
-		
 		led_blink(1);
     2072:	66 e5       	ldi	r22, 0x56	; 86
     2074:	71 e2       	ldi	r23, 0x21	; 33
