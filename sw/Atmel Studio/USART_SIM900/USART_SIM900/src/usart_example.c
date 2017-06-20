@@ -245,20 +245,6 @@ volatile uint8_t controller_active = 0;
 ////////////////////////////////////////////////////////////////////////////////////
 
 //AT PARSER
-typedef void ( *at_cmd_cb )( char *response );
-
-typedef struct
-{
-	uint32_t                hash;
-	uint32_t                timeout;
-	at_cmd_cb               getter;
-	at_cmd_cb               setter;
-	at_cmd_cb               tester;
-	at_cmd_cb               executer;
-	
-} at_cmd_t;
-
-uint8_t AT_STORAGE_SIZE = 126;
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -307,67 +293,55 @@ uint8_t usart_rx_at(USART_t *usart, uint16_t timeout)
 
 uint8_t at_response(USART_t *usart, uint16_t timeout) {
 	
-	uint8_t init_done = 0;
 	uint8_t len_response = 50;
 	char response[len_response];
 	uint8_t i = 0;
 	uint8_t j = 0;
 	status_at_timeout = 0;
+	uint8_t status = 1;
 	
-	while ((status_at_timeout == 0) & (init_done == 0)) //usually the AT command is sent in return followed by \r\n
+	
+	while (status_at_timeout == 0) //usually the AT command is sent in return followed by \r\n
 	{
 		response[i] = usart_rx_at(usart, timeout);
 		
 		
 		if ((response[i-1] == 0x4f) & (response[i] == 0x4b)) //check if OK is in the response
 		{
-			init_done = 1;
-			i++;
-			break;
+			//status = 0;
 		}
 		
-		if ((response[i-4] == 0x45) & (response[i-3] == 0x52) & (response[i-2] == 0x52) & (response[i-1] == 0x4f) & (response[i] == 0x52)) //check if ERROR is in the response
+		
+		if ( (response[i-2] == 0x3a & response[i-1] == 0x20) ) //check if ': ' is in the response
 		{
-			init_done = 1;
-			i++;
-			break;
+			if ((response[i] >= 0x30 & response[i] <= 0x39))
+			{
+				status = response[i] - 0x30;
+			}
 		}
-		
-		if (response[i] == 0x3e) //check if '>' is in the response, from send command
-		{
-			init_done = 1;
-			i++;
-			break;
-		}
-		
-		if ((response[i-3] == 0x53) & (response[i-2] == 0x3a) & (response[i-1] == 0x20) & (response[i] == 0x30)) //check if 'QNSTATUS: 0' is in the response
-		{
-			init_done = 1;
-			i++;
-			break;
-		}
-		
 		
 		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 		i++;
 	}
 	
-	
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
+// 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+// 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 		
 	while (j<i)
 	{
 		usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
+		//usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+		//usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 		j++;
 	}
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
+// 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+// 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 		
-	return status_at_timeout;
+	//usart_putchar(USART_SERIAL_EXAMPLE, resp_nr);
+	return status; //_at_timeout;
 }
 
-uint8_t at_response_qnstatus(USART_t *usart, uint16_t timeout) {
+uint8_t at_response_num(USART_t *usart, uint16_t timeout) {
 	
 	uint8_t init_done = 0;
 	uint8_t len_response = 50;
@@ -375,124 +349,68 @@ uint8_t at_response_qnstatus(USART_t *usart, uint16_t timeout) {
 	uint8_t i = 0;
 	uint8_t j = 0;
 	status_at_timeout = 0;
-	uint8_t status_qnstatus = 0;
+	uint8_t response_num = 0;
+	uint8_t response_cnt = 0;
 	
 	while ((status_at_timeout == 0) & (init_done == 0)) //usually the AT command is sent in return followed by \r\n
 	{
 		response[i] = usart_rx_at(usart, timeout);
-		
-		if ((response[i-3] == 0x53) & (response[i-2] == 0x3a) & (response[i-1] == 0x20) & (response[i] == 0x30)) //check if 'QNSTATUS: 0' is in the response
+			
+		/*	
+		if (((response[i-1] >= 0x30) & (response[i-1] <= 0x39)) & (response[i] == 0x0d) & (status_at_timeout == 0)) //CR + LF => text in front
 		{
-			init_done = 1;
-			status_qnstatus = 1;
-			i++;
+			//usart_putchar(USART_SERIAL_EXAMPLE, 0x40); //@ if text
+			response_num = response[i-1];
 			break;
 		}
+		*/
 		
+		if (((response[i] >= 0x30) & (response[i] <= 0x39)) & (status_at_timeout == 0)) //CR + LF => text in front
+		{
+			//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
+// 			usart_tx_at(USART_SERIAL_EXAMPLE, CR);
+// 			usart_tx_at(USART_SERIAL_EXAMPLE, LF);
+			response_num = response[i];
+			response_cnt++;
+			response_num = response_cnt+0x30;
+			//break;
+		}
 		
 		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
+		//usart_putchar(USART_SERIAL_EXAMPLE, 0x0a);
+		
 		i++;
+		
 	}
+	
+	
 	
 	
 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	
+	/*	
 	while (j<i)
 	{
-		usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
+		if (response[j] == 0x0d) //CR
+		{
+			if (response[j+1] != 0x0a)
+			{
+				response_num = response[j-1];
+				break;
+			}
+			//usart_putchar(USART_SERIAL_EXAMPLE, 0x40); //@ if text
+		}
+		
+		//usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
 		j++;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
+	*/
 	
-	return status_qnstatus;
+	usart_putchar(USART_SERIAL_EXAMPLE, response_num);
+	return response_num;
 }
-
-uint8_t at_response_creg(USART_t *usart, uint16_t timeout) {
-	
-	uint8_t init_done = 0;
-	uint8_t len_response = 50;
-	char response[len_response];
-	uint8_t i = 0;
-	uint8_t j = 0;
-	status_at_timeout = 0;
-	uint8_t status_creg = 0;
-	
-	while ((status_at_timeout == 0) & (init_done == 0)) //usually the AT command is sent in return followed by \r\n
-	{
-		response[i] = usart_rx_at(usart, timeout);
-		
-		if ((response[i-3] == 0x3a) & (response[i-2] == 0x20) & (response[i-1] == 0x30) & ((response[i] == 0x2c) || (response[i] == 0x35))) //check if 'CREG: 0,5' is in the response
-		{
-			init_done = 1;
-			status_creg = 1;
-			i++;
-			break;
-		}
-		
-		
-		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-		i++;
-	}
-	
-	
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	
-	while (j<i)
-	{
-		usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
-		j++;
-	}
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	
-	return status_creg;
-}
-
-uint8_t at_response_qistat(USART_t *usart, uint16_t timeout) {
-	
-	uint8_t init_done = 0;
-	uint8_t len_response = 50;
-	char response[len_response];
-	uint8_t i = 0;
-	uint8_t j = 0;
-	status_at_timeout = 0;
-	uint8_t status_creg = 0;
-	
-	while ((status_at_timeout == 0) & (init_done == 0)) //usually the AT command is sent in return followed by \r\n
-	{
-		response[i] = usart_rx_at(usart, timeout);
-		
-		if ((response[i-3] == 0x3a) & (response[i-2] == 0x20) & (response[i-1] == 0x30) & ((response[i] == 0x2c) || (response[i] == 0x35))) //check if 'CREG: 0,5' is in the response
-		{
-			init_done = 1;
-			status_creg = 1;
-			i++;
-			break;
-		}
-		
-		
-		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-		i++;
-	}
-	
-	
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	
-	while (j<i)
-	{
-		usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
-		j++;
-	}
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	
-	return status_creg;
-}
-
 
 void led_blink(uint8_t on_time) {
 	
@@ -930,82 +848,15 @@ int main(void)
 	sei();
 	
 	
-	/*
-	#define  AT_ATI  "AT\r"
-	
-	usart_tx_at(USART_SERIAL_EXAMPLE, AT_ATI);
-	
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_ATI);
-	if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-				}
-	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_CMGF);
-	if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-				}
-	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_CMGS);
-	if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-				}
-	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_MESSAGE);
-	if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-				}
-	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-	
-	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
-	if (at_response(USART_SERIAL_SIM900)) //if timeout
-				{
-					usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-				}
-	usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-	*/
-	
-	/*
-	//AT TCP/IP commands M95
-	#define AT_QICLOSE "AT+QICLOSE\r"  //Same as AT_CIPSHUT, check notes in app note
-	#define AT_QISTAT "AT+QISTAT\r" //Same as AT_CIPSTATUS, or...A LOT OF STAT COMMANDS!!!! CHECK OUT!!!!!
-
-
-	//ch 3.1 in TCP/IP app note
-	#define AT_QIFGCNT "AT+QIFGCNT=0\r" //config uart id
-	#define AT_QICSGP "AT+QICSGP=1,\"apn1.lillebakk.com\",\"\",\"\"\r"
-	#define AT_QIMUX "AT+QIMUX=0\r" //same as AT_CIPMUX
-	#define AT_QIMODE "AT+QIMODE=0\r"
-	#define AT_QIDNSIP "AT+QIDNSIP=0\r"
-
-	//ch 3.2 in TCP/IP app note
-	#define AT_QIREGAPP "AT+QIREGAPP\r"
-	#define AT_QIACT "AT+QIACT\r"
-	#define AT_QILOCIP "AT+QILOCIP\r"
-	#define AT_QIOPEN "AT+QIOPEN=\"TCP\",\"10.18.0.39\",\"1883\"\r"
-
-	//CH 3.4 in tcp/ip app note
-	#define AT_QISRVC "AT+QISRVC=1\r"
-	#define AT_QISEND "AT+QISEND\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
-	//It must be terminated with ctrl+z.
-	//There will be a response from the server.
-	*/
-	
 	PORTQ.OUT &= ~(1<<3); //led on while waiting for status
 	radio_pins_init(); //initialize pins towards radio module. Wake up radio.
-		
+	
+	
 	//wait for status
 	while (!(STATUS_PORT.IN & (1<<STATUS_PIN)));
 	PORTQ.OUT |= (1<<3); //led off
 	
-	static at_cmd_t at_cmd_storage [128];
+	
 	
 	//AT+CREG??????????
 	/*
@@ -1020,66 +871,102 @@ int main(void)
 	}
 	*/
 	
-	//Wait for GSM network status
+	//SETTING RESPONSE FORMAT
+	#define ATV0 "ATV0\r" //response format is numbers
+	#define ATV1 "ATV1\r" //response format is text
 	
-	uint8_t mystatus = 0;
-	while (mystatus == 0)
+	uint8_t mychar = 0;
+	
+	/*
+	i=0;
+	while (i<2)
 	{
-		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
-		if (at_response_qnstatus(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_OK); mystatus = 1;}
+	usart_tx_at(USART_SERIAL_SIM900, ATV0); //return +QNSTATUS: n, where 0 is ok.
+	mychar = at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	delay_s(1);
+	i++;
+	}
+	*/
+	//usart_putchar(USART_SERIAL_EXAMPLE, mychar);
+	
 		
-		delay_s(2);
+	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		
+	//Wait for GSM network status
+	mychar = 1;
+ 	while (mychar != 0)
+ 	{
+		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
+		mychar  = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		delay_s(1);
 	}
 	
-	delay_s(2);
+	//delay_s(2);
 	
 	//usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK. Perhaps not needed if waking up from power down.
 	//if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	if (at_response_qistat(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		
 	
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIFGCNT); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QICSGP); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_ms(300); //max response time 300ms.
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIMUX); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIMODE); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
-	
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIDNSIP); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIREGAPP); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
+	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_QISTAT); //return OK
+	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIACT); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
+		
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QILOCIP); //return OK //fix response
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);} //fix response
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
+	
+	//CHECK IP STATUS
+	//mychar = 0;
+	//while (mychar != 0x30 || mychar != 0x35 || mychar != 0x37)
+	//{
+// 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+// 		mychar = at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	//}
+	
+	//usart_tx_at(USART_SERIAL_EXAMPLE, AT_QIOPEN); //return OK
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIOPEN); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
+	//at_response_num(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
-	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	if (at_response_qistat(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
-	delay_s(1);
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+
+	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	if (at_response_qistat(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISEND); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 		
 	char* AT_MESSAGE2 = "2213 10:33:22";
@@ -1089,16 +976,16 @@ int main(void)
 		
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 	//usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK REMOVE?????????????
 	//if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);}
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 	//delay_s(1);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIDEACT); //return OK
-	if (at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);} //REMOVE THIS ONE IF IT TAKES TOO LONG TIME.
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
 	//delay_s(1);
 	
 	
