@@ -105,6 +105,12 @@
 	*/
 
 
+/*
+Data shared between the ISR and your main program must be both volatile and global in scope in the C language. 
+Without the volatile keyword, the compiler may optimize out accesses to a variable you update in an ISR,
+as the C language itself has no concept of different execution threads. Take the following example:
+*/
+
 //DEFINE DEBUG. REMOVE IN FINAL CODE!
 //#define _DEBUG 1
 
@@ -163,9 +169,11 @@ typedef enum {
 controller_states_t controller_state = MEASURE; //CHANGE IN FINAL.
 
 //sampling and storage
-static const uint16_t TS = 5; //actual sampling in seconds
-static const uint16_t TTX = 20; //actual transfer rate in seconds
-static const uint16_t TAVG = 20; //actual averaging time in seconds
+#define SAMPLING_TIME 5
+#define AVERAGING_TIME 300
+volatile static const uint16_t TS = SAMPLING_TIME; //actual sampling in seconds
+volatile static const uint16_t TTX = AVERAGING_TIME; //actual transfer rate in seconds
+volatile static const uint16_t TAVG = AVERAGING_TIME; //actual averaging time in seconds
 
 //uint16_t accu_data[3600]; //allocating internal accumulation storage.
 uint32_t accu_data = 0; //allocating internal accumulation storage.
@@ -257,6 +265,7 @@ void led_blink(uint8_t on_time);
 void at_timeout_start(uint16_t timeout);
 void at_timeout_stop();
 void response_debug(uint8_t code);
+void tx(char data[]);
 
 //Functions
 void usart_tx_at(USART_t *usart, uint8_t *cmd) {
@@ -281,29 +290,38 @@ void usart_tx_at(USART_t *usart, uint8_t *cmd) {
 
 uint8_t usart_rx_at(USART_t *usart, uint16_t timeout)
 {
-	at_timeout_start(timeout);
+	//at_timeout_start(timeout);
+	uint32_t timeout2 = timeout*1000; //300ms
 	
-	while ((usart_rx_is_complete(usart) == false) & (status_at_timeout == 0)) {
+	while ((usart_rx_is_complete(usart) == false) & (timeout2 > 0)) {
+		timeout2--;
 	}
 	
-	at_timeout_stop();
+	if (timeout2 == 0)
+	{
+		//usart_tx_at(USART_SERIAL_EXAMPLE, 0x40);
+		status_at_timeout = 1;
+	}
+	//at_timeout_stop();
 	
 	return ((uint8_t)(usart)->DATA);
 }
 
 uint8_t at_response(USART_t *usart, uint16_t timeout) {
 	
-	uint8_t len_response = 50;
+	uint8_t len_response = 100;
 	char response[len_response];
+	char response_ok[3] = "OK";
 	uint8_t i = 0;
 	uint8_t j = 0;
 	status_at_timeout = 0;
 	uint8_t status = 1;
+		
 	
-	
-	while (status_at_timeout == 0) //usually the AT command is sent in return followed by \r\n
+	while (status_at_timeout == 0 & i < len_response) //usually the AT command is sent in return followed by \r\n
 	{
 		response[i] = usart_rx_at(usart, timeout);
+		
 		
 		
 		if ((response[i-1] == 0x4f) & (response[i] == 0x4b)) //check if OK is in the response
@@ -311,19 +329,60 @@ uint8_t at_response(USART_t *usart, uint16_t timeout) {
 			//status = 0;
 		}
 		
-		
-		if ( (response[i-2] == 0x3a & response[i-1] == 0x20) ) //check if ': ' is in the response
+		//check if 'QNSTATUS: ' is in the response
+		if ( (response[i-10] == 0x51 & response[i-9] == 0x4e & response[i-8] == 0x53 & response[i-7] == 0x54 & response[i-6] == 0x41 & response[i-5] == 0x54 & response[i-4] == 0x55 & response[i-3] == 0x53 & response[i-2] == 0x3a & response[i-1] == 0x20) ) 
 		{
 			if ((response[i] >= 0x30 & response[i] <= 0x39))
 			{
 				status = response[i] - 0x30;
+				//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 			}
+		}
+		
+		//check if 'STATE: ' is in the response
+		if ( (response[i-6] == 0x53 & response[i-5] == 0x54 & response[i-4] == 0x41 & response[i-3] == 0x54 & response[i-2] == 0x45 & response[i-1] == 0x3a & response[i] == 0x20) ) 
+		{
+			i++;
+			while (status_at_timeout == 0 & i < len_response & response[i] != 0x0d) //
+			{
+				
+				response[i] = usart_rx_at(usart, timeout);
+				i++;
+				
+				//check if 'GPRSACT' is in the response
+				if ( (response[i-6] == 0x47 & response[i-5] == 0x50 & response[i-4] == 0x52 & response[i-3] == 0x53 & response[i-2] == 0x41 & response[i-1] == 0x43 & response[i] == 0x54) ) 
+				{
+					status = 4;
+				}
+				//check if 'CONNECT OK' is in the response
+				if ( (response[i-1] == 0x4f & response[i] == 0x4b) )
+				{
+					status = 9;
+				}
+			}
+			i--;
+			
+			led_blink(1);
+			/*
+			if ((response[i] >= 0x30 & response[i] <= 0x39))
+			{
+				status = response[i] - 0x30;
+				//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
+			}
+			*/
 		}
 		
 		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
 		i++;
 	}
 	
+	/*
+	if (status_at_timeout != 0)
+	{
+		usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
+	}
+	*/
+	//usart_putchar(USART_SERIAL_EXAMPLE, 0x40);
 // 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
 // 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
 		
@@ -339,77 +398,6 @@ uint8_t at_response(USART_t *usart, uint16_t timeout) {
 		
 	//usart_putchar(USART_SERIAL_EXAMPLE, resp_nr);
 	return status; //_at_timeout;
-}
-
-uint8_t at_response_num(USART_t *usart, uint16_t timeout) {
-	
-	uint8_t init_done = 0;
-	uint8_t len_response = 50;
-	char response[len_response];
-	uint8_t i = 0;
-	uint8_t j = 0;
-	status_at_timeout = 0;
-	uint8_t response_num = 0;
-	uint8_t response_cnt = 0;
-	
-	while ((status_at_timeout == 0) & (init_done == 0)) //usually the AT command is sent in return followed by \r\n
-	{
-		response[i] = usart_rx_at(usart, timeout);
-			
-		/*	
-		if (((response[i-1] >= 0x30) & (response[i-1] <= 0x39)) & (response[i] == 0x0d) & (status_at_timeout == 0)) //CR + LF => text in front
-		{
-			//usart_putchar(USART_SERIAL_EXAMPLE, 0x40); //@ if text
-			response_num = response[i-1];
-			break;
-		}
-		*/
-		
-		if (((response[i] >= 0x30) & (response[i] <= 0x39)) & (status_at_timeout == 0)) //CR + LF => text in front
-		{
-			//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-// 			usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-// 			usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-			response_num = response[i];
-			response_cnt++;
-			response_num = response_cnt+0x30;
-			//break;
-		}
-		
-		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-		//usart_putchar(USART_SERIAL_EXAMPLE, 0x0a);
-		
-		i++;
-		
-	}
-	
-	
-	
-	
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	/*	
-	while (j<i)
-	{
-		if (response[j] == 0x0d) //CR
-		{
-			if (response[j+1] != 0x0a)
-			{
-				response_num = response[j-1];
-				break;
-			}
-			//usart_putchar(USART_SERIAL_EXAMPLE, 0x40); //@ if text
-		}
-		
-		//usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
-		j++;
-	}
-	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-	*/
-	
-	usart_putchar(USART_SERIAL_EXAMPLE, response_num);
-	return response_num;
 }
 
 void led_blink(uint8_t on_time) {
@@ -435,6 +423,7 @@ void rtc_init_period(uint16_t period)
 
 
 void at_timeout_start(uint16_t timeout) {
+	//tc_enable(&AT_TIMEOUT_TC);	
 	AT_TIMEOUT_TC.PER = timeout; //2000 = 1 second, default ~300ms.
 	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
 	AT_TIMEOUT_TC.CNT = 0; //reset counter
@@ -443,6 +432,7 @@ void at_timeout_start(uint16_t timeout) {
 
 void at_timeout_stop() {
 	cli(); //disable interrupt
+	tc_disable(&AT_TIMEOUT_TC);
 	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
 	
 }
@@ -489,11 +479,14 @@ int mqtt_packet(char *payload) //*payload is the original
 ///////////////////////////////////////////////////
 
 void at_command_timeout_setup() {
+	//PR.PRPC &= ~(1<<0); //TCC0
 	//AT_TIMEOUT_TC.INTCTRLA |= (0<<0); //disable counter
 	AT_TIMEOUT_TC.INTCTRLA |= (1<<0);
 	AT_TIMEOUT_TC.CTRLA = TC_CLKSEL_DIV1024_gc;
 	AT_TIMEOUT_TC.CTRLB |= 0b000;
 	AT_TIMEOUT_TC.PER = 700; //2000 = 1 second, default ~300ms.
+	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
+	AT_TIMEOUT_TC.CNT = 0; //reset counter
 }
 
 static void adc_init(void)
@@ -631,7 +624,7 @@ void controller_tx(uint16_t array[TX_DATA_SIZE]) {
     strcat(transfer_data, max_ascii);
     strcat(transfer_data, ",");
     strcat(transfer_data, tran_ascii);
-	strcat(transfer_data, ",");
+	//strcat(transfer_data, ",");
     /*
     strcat(transfer_data, ",");
     strcat(transfer_data, year_ascii);
@@ -650,6 +643,8 @@ void controller_tx(uint16_t array[TX_DATA_SIZE]) {
 		usart_putchar(USART_SERIAL_EXAMPLE, transfer_data[i]);
 		i++;
 	}
+	
+	tx(&transfer_data);
     //usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
     usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
 	
@@ -685,6 +680,18 @@ void radio_pins_init(void) {
 	
 	//PWRKEY and startup sequence.
 	PWRKEY_PORT.DIR |= (1<<PWRKEY_PIN); //reset pin
+	
+	
+	//STATUS, NOT NEEDED AS NETLIGHT IS REQUIRED BEFORE SENDING COMMANDS.
+	STATUS_PORT.DIR &= ~(1<<STATUS_PIN); //input
+	//portctrl_setup(STATUS_PORT, STATUS_PIN); //should not be needed.
+	
+	//NETLIGHT. NOT AVAILABLE ON DEVELOPMENT BOARD, HAVE TO USE SW CALL TO CHECK FOR CONNECTION STATUS.
+	//NETLIGHT_PORT.DIR &= ~(1<<NETLIGHT_PIN); //input
+	
+}
+
+void radio_power_on(void) {
 	PWRKEY_PORT.OUT &= ~(1<<PWRKEY_PIN); //reset
 	delay_ms(1); //wait for battery voltage to settle.
 	PWRKEY_PORT.OUT |= (1<<PWRKEY_PIN); //reset of radio
@@ -694,14 +701,6 @@ void radio_pins_init(void) {
 	delay_ms(400);
 	PWRKEY_PORT.OUT |= (1<<PWRKEY_PIN); //normal level for this pin
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	//STATUS, NOT NEEDED AS NETLIGHT IS REQUIRED BEFORE SENDING COMMANDS.
-	STATUS_PORT.DIR &= ~(1<<STATUS_PIN); //input
-	//portctrl_setup(STATUS_PORT, STATUS_PIN); //should not be needed.
-	
-	//NETLIGHT. NOT AVAILABLE ON DEVELOPMENT BOARD, HAVE TO USE SW CALL TO CHECK FOR CONNECTION STATUS.
-	//NETLIGHT_PORT.DIR &= ~(1<<NETLIGHT_PIN); //input
-	
 }
 
 void radio_power_down(void) {
@@ -713,11 +712,111 @@ void radio_power_down(void) {
 	PWRKEY_PORT.OUT &= ~(1<<PWRKEY_PIN);
 }
 
+void tx(char data[TX_DATA_SIZE]) {
+	
+	//AT+CREG??????????
+	
+	//SETTING RESPONSE FORMAT
+	#define ATV0 "ATV0\r" //response format is numbers
+	#define ATV1 "ATV1\r" //response format is text
+	
+	uint8_t tx_status = 0;
+		
+	//Wait for GSM network status
+	tx_status = 1;
+ 	while (tx_status != 0)
+ 	{
+		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
+		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		usart_putchar(USART_SERIAL_EXAMPLE, (tx_status+0x30));
+		//at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		delay_s(1);
+	}
+	
+// 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+// 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIFGCNT); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QICSGP); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIMUX); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIMODE); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIDNSIP); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIREGAPP); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIACT); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
+		
+	usart_tx_at(USART_SERIAL_SIM900, AT_QILOCIP); //return OK //fix response
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	//CHECK IP STATUS
+	tx_status = 1;
+	while (tx_status != 4)
+	{
+		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		delay_s(1);
+	}
+
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIOPEN); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	//CHECK IP STATUS
+	tx_status = 1;
+	while (tx_status != 9)
+	{
+		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+		delay_s(1);
+	}
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QISEND); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+			
+	//char* AT_MESSAGE2 = "2213 10:33:22";
+	char* AT_MESSAGE2 = data;
+		
+// 	while (1)
+// 	{
+// 	}
+	mqtt_packet(AT_MESSAGE2);
+	delay_ms(300);
+		
+	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+	usart_tx_at(USART_SERIAL_SIM900, AT_QIDEACT); //return OK
+	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
+	
+}
+
+/*
 ISR(TCC0_OVF_vect) {
 	at_timeout_stop();
 	status_at_timeout = 1;
 }
-
+*/
 
 ISR(RTC_OVF_vect)
 {
@@ -756,8 +855,28 @@ ISR(RTC_OVF_vect)
 	
 	if (controller_state == TX_DATA)
 	{
+		
+		//Startup of radio
+		radio_power_on();
+		
+		//wait for status
+		while (!(STATUS_PORT.IN & (1<<STATUS_PIN)));
+		PORTQ.OUT |= (1<<3); //led off
+		////////////////////////////////////////////////////////
+		
+		
+		
 		controller_tx(&tx_data);
 		reset_tx_data(&tx_data);
+		//tx(&tx_data);
+		//DEBUG
+// 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+// 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+	
+				
+		
+		//radio power down
+		radio_power_down();
 		
 		controller_state = MEASURE;
 		
@@ -777,7 +896,7 @@ int main(void)
 	cli();
 	
 	//general counter variable used by many functions.
-	uint8_t i = 0;
+	//uint8_t i = 0;
 	
 		
 	/* Initialize the board.
@@ -785,9 +904,9 @@ int main(void)
 	 * the board initialization.
 	 */
 	board_init();
-	//pmic_init(); //needed for TC ASF code. Check if needed in real implementation.
-	PMIC.CTRL = 0x01; //low level interrupt
-	//sysclk_init(); //fucks up the at_response....AHGHHHHHHHHHHHHH
+	pmic_init(); //needed for TC ASF code. Check if needed in real implementation.
+	//PMIC.CTRL = 0x01; //low level interrupt
+	sysclk_init(); //fucks up the at_response....AHGHHHHHHHHHHHHH
 	
 	//select system clock
 	//CLK.CTRL = 0x01; //2M
@@ -814,11 +933,53 @@ int main(void)
 	
 
 	usart_init_rs232(USART_SERIAL_EXAMPLE, &USART_SERIAL_OPTIONS);
-	
 	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_OPTIONS);
+	sysclk_enable_module(SYSCLK_PORT_C, 4);
+	sysclk_enable_module(SYSCLK_PORT_E, 4);
+	//sysclk_enable_peripheral_clock(USARTC0);
+// 	
+	//uint32_t FCPU = sysclk_get_main_hz();
+	//PR.PRPC &= ~(1<<4); //enable the clock
+	//PR.PRPE &= ~(1<<4); //enable the clock
 	
-	at_command_timeout_setup();
-	//sei();
+	
+	//Shut down radio if already awake
+	radio_pins_init();
+	//check if status is off
+	if (STATUS_PORT.IN & (1<<STATUS_PIN))
+	{
+		radio_power_down();
+		while ((STATUS_PORT.IN & (1<<STATUS_PIN)))
+		{
+			//just wait and drink coffe....
+		}
+	}
+	 	
+	////////////////////////////////////////////////////////
+		
+	
+	/*
+		tc_enable(&TCC0);	
+		//tc_set_overflow_interrupt_callback(&TCC0, my_callback);
+		tc_set_wgm(&TCC0, TC_WG_NORMAL);
+		tc_write_period(&TCC0, 1000);
+		tc_set_overflow_interrupt_level(&TCC0, TC_INT_LVL_LO);
+		cpu_irq_enable();
+		//tc_write_clock_source(&TCC0, TC_CLKSEL_DIV1_gc);
+ 	//at_command_timeout_setup();
+	 //PR.PRPC &= ~(1<<0); //TCC0
+	//AT_TIMEOUT_TC.INTCTRLA |= (0<<0); //disable counter
+	//AT_TIMEOUT_TC.INTCTRLA |= (1<<0);
+	AT_TIMEOUT_TC.CTRLA = TC_CLKSEL_DIV1024_gc;
+	//AT_TIMEOUT_TC.CTRLB |= 0b000;
+	//AT_TIMEOUT_TC.PER = 700; //2000 = 1 second, default ~300ms.
+	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
+	AT_TIMEOUT_TC.CNT = 0; //reset counter
+// 	//sysclk_enable_module(SYSCLK_PORT_C, 0);
+// 	  sysclk_enable_module(SYSCLK_PORT_C, SYSCLK_TC0);
+// 	  sysclk_enable_module(SYSCLK_PORT_C, SYSCLK_HIRES);
+		*/
+	sei();
 	
 	//WDT setup
 	
@@ -827,138 +988,23 @@ int main(void)
 	reset_tx_data(&tx_data);
 	
 	//RTC
-	/*
+	PR.PRGEN &= ~(1<<2); //enable the RTC clock
 	sleepmgr_init();
 	rtc_init_period(TS); //using RTC as sampler timer.
-	cpu_irq_enable();
 	
 	
 	
 	
+	//DEBUG
+// 	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
+// 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
+// 	usart_putchar(USART_SERIAL_EXAMPLE, 0x40);
 	
 	while (1)
 	{
+		//usart_tx_at(USART_SERIAL_EXAMPLE, ENTER_SLEEP);
 		sleepmgr_enter_sleep();
 		//controller_execute_debug();
 	}
-	*/
-	
-	
-	//DEBUG M95
-	sei();
-	
-	
-	PORTQ.OUT &= ~(1<<3); //led on while waiting for status
-	radio_pins_init(); //initialize pins towards radio module. Wake up radio.
-	
-	
-	//wait for status
-	while (!(STATUS_PORT.IN & (1<<STATUS_PIN)));
-	PORTQ.OUT |= (1<<3); //led off
-	
-	
-	
-	//AT+CREG??????????
-	/*
-	#define AT_CREG "AT+CREG?\n"
-	uint8_t mystatus = 0;
-	while (mystatus == 0)
-	{
-		usart_tx_at(USART_SERIAL_SIM900, AT_CREG); //return +QNSTATUS: n, where 0 is ok.
-		if (at_response_creg(USART_SERIAL_SIM900, RESPONSE_TIME_300M)) {usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_OK); mystatus = 1;}
 		
-		delay_ms(2000);
-	}
-	*/
-	
-	//SETTING RESPONSE FORMAT
-	#define ATV0 "ATV0\r" //response format is numbers
-	#define ATV1 "ATV1\r" //response format is text
-	
-	uint8_t tx_status = 0;
-		
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-		
-	//Wait for GSM network status
-	tx_status = 1;
- 	while (tx_status != 0)
- 	{
-		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
-		tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-		delay_s(1);
-	}
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIFGCNT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QICSGP); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIMUX); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIMODE); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIDNSIP); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIREGAPP); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIACT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-		
-	usart_tx_at(USART_SERIAL_SIM900, AT_QILOCIP); //return OK //fix response
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	//CHECK IP STATUS
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIOPEN); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISRVC); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QISEND); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-			
-	char* AT_MESSAGE2 = "2213 10:33:22";
-		
-	mqtt_packet(AT_MESSAGE2);
-	delay_ms(300);
-		
-	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QICLOSE); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-	usart_tx_at(USART_SERIAL_SIM900, AT_QIDEACT); //return OK
-	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S);
-	
-	//radio power down
-	radio_power_down();
-	
-	while (1)
-	{
-		led_blink(1);
-	}
-	//////////////////////////////////////////////////
-	
-	
-	
 }

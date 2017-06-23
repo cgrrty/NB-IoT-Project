@@ -10,6 +10,8 @@ src\ASF\xmega\drivers\adc\xmega_aau\adc_aau.c
 
 src\ASF\xmega\drivers\rtc\rtc.c
 
+src\ASF\xmega\drivers\tc\tc.c
+
 src\ASF\xmega\drivers\wdt\wdt.c
 
 src\MQTTConnectClient.c
