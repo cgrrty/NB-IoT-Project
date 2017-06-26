@@ -111,7 +111,8 @@ char *AT_QIOPEN[] = {AT_QIOPEN_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SERVER
 
 //define other text commands
 #define SPACE " "
-#define ENTER_SLEEP "\n\nENTER SLEEP\n\n"
+#define ENTER_SLEEP "\r\nENTER SLEEP\r\n"
+#define TX_STATEMENT "\r\nTx returned status code: "
 
 
 #endif /* SIM900_AT_COMMANDS_H_ */
