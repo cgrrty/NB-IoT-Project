@@ -57,8 +57,10 @@ char *AT_CIPSTART[] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SE
 #define AT_QISTAT "AT+QISTAT\r" //Same as AT_CIPSTATUS, or...A LOT OF STAT COMMANDS!!!! CHECK OUT!!!!!
 
 
-//network status
+//network and radio status
 #define AT_QNSTATUS "AT+QNSTATUS\r"
+#define AT_QLTS "AT+QLTS\r" //Time and date from network.
+#define AT_CBC "AT+CBC\r" //battery voltage
 
 //ch 3.1 in TCP/IP app note
 #define AT_QIFGCNT "AT+QIFGCNT=0\r" //config uart id
@@ -108,6 +110,7 @@ char *AT_QIOPEN[] = {AT_QIOPEN_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SERVER
 #define RESPONSE_ERROR "\r\nTIMEOUT ERROR\r\n"
 #define O_UINT8 0x4f
 #define K_UINT8 0x4b
+#define QNSTATUS_0 "QNSTATUS: 0"
 
 //define other text commands
 #define SPACE " "

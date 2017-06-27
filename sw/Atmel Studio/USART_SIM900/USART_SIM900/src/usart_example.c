@@ -170,19 +170,14 @@ controller_states_t controller_state = MEASURE; //CHANGE IN FINAL.
 
 //sampling and storage
 #define SAMPLING_TIME 5
-#define AVERAGING_TIME 6000
+#define AVERAGING_TIME 600
 volatile static const uint16_t TS = SAMPLING_TIME; //actual sampling in seconds
 volatile static const uint16_t TTX = AVERAGING_TIME; //actual transfer rate in seconds
 volatile static const uint16_t TAVG = AVERAGING_TIME; //actual averaging time in seconds
 
 //uint16_t accu_data[3600]; //allocating internal accumulation storage.
 uint32_t accu_data = 0; //allocating internal accumulation storage.
-uint16_t accu_data_cnt = 0; //counter for accu data.
-uint16_t avg_data = 0;
 #define MIN_DATA_RESET 0xffff
-uint16_t min_data = MIN_DATA_RESET;
-uint16_t max_data = 0;
-uint16_t tran_data = 0;
 
 #define POSITION_PREV 0
 #define POSITION_TRAN_PREV 1
@@ -190,30 +185,37 @@ uint16_t tran_data = 0;
 #define POSITION_AVG 3
 #define POSITION_MIN 4
 #define POSITION_MAX 5
-//#define POSITION_xxx 6 //reserved.
+#define POSITION_TIMESTAMP 6
 #define POSITION_ACCU_CNT 7
-#define TX_DATA_SIZE 9 //sum of the above +1.
-uint16_t tx_data[TX_DATA_SIZE]; //prev, prev_tran, tran_max, avg, min, max => data to be transferred to external memory and over air.
+#define POSITION_VDD_XMEGA 8
+#define TX_DATA_SIZE 10 //sum of the above +1.
+volatile uint16_t tx_data[TX_DATA_SIZE]; //prev, prev_tran, tran_max, avg, min, max => data to be transferred to external memory and over air.
+
+#define POSITION_YEAR 0
+#define POSITION_MONTH 1
+#define POSITION_DAY 2
+#define POSITION_HOUR 3
+#define POSITION_MINUTE 4
+#define POSITION_SECOND 5
+#define TX_DATE_SIZE 7 //sum of the above +1.
+volatile uint8_t tx_date[TX_DATE_SIZE]; //year, month, day, hour, minute, second
+
 #define RESPONSE_SIZE 100
-char response[RESPONSE_SIZE];
+volatile char response[RESPONSE_SIZE];
 
 //status and modes
-#define OK 0
-#define TIMEOUT 1
 #define STATUS_AT_DEBUG "\r\nSTATUS AT: "
 
 
-volatile uint8_t status_at = 0;
 volatile uint8_t status_at_timeout = 0;
-volatile uint8_t tx_active = 0;
-volatile uint8_t controller_active = 0;
+
 
 //interrupt
 #define INT_LEVEL_LOW 0x01
 
 //timers
 #define AT_TIMEOUT_TC TCC0 //define AT command timeout counter.
-//#define AT_TIMEOUT 1000
+#define AT_REPEAT 9 //number of times to repeat an AT command.
 
 #define CONFIG_RTC_PRESCALER RTC_PRESCALER_DIV1024_gc
 #define CONFIG_RTC_SOURCE SYSCLK_RTCSRC_ULP
@@ -221,37 +223,28 @@ volatile uint8_t controller_active = 0;
 //ADC
 #define ADC_LC ADCA //define ADC A for load cell
 #define ADC_LC_CH ADC_CH0 //define channel 0 for load cell measurements.
+#define ADC_VDD_XMEGA_CH ADC_CH1 //define channel 1 for xmega vdd measurements.
 
-//data variables
-	//uint16_t loadcell_adc_result = 0;
-// 	uint16_t loadcell_adc_result_prev = 0;
-// 	int16_t loadcell_adc_result_tran = 0; //signed due to difference in both directions
-// 	int16_t loadcell_adc_result_tran_prev = 0; //signed due to difference in both directions
-// 	int16_t loadcell_adc_result_tran_max = 0; //signed due to difference in both directions
-// 	
-	//int loadcell_adc_result_low;
-// 	int loadcell_adc_result_mid;
-// 	int loadcell_adc_result_hi;
-// 	
-	char avg_ascii[5] = "";
-	char min_ascii[5] = "";
-	char max_ascii[5] = "";
-	char tran_ascii[5] = "";
+char avg_ascii[5] = "";
+char min_ascii[5] = "";
+char max_ascii[5] = "";
+char tran_ascii[5] = "";
 	
-	uint8_t year = 0;
-	uint8_t month = 0;
-	uint8_t day = 0;
-	uint8_t hour = 0;
-	uint8_t minute = 0;
-	uint8_t second = 0;
-	char year_ascii[3] = "";
-	char month_ascii[3] = "";
-	char day_ascii[3] = "";
-	char hour_ascii[3] = "";
-	char minute_ascii[3] = "";
-	char second_ascii[3] = "";
-	#define TRANSFER_DATA_SIZE 64
-	char transfer_data[TRANSFER_DATA_SIZE] = ""; //currently 45 if sent as text.
+char timestamp_ascii[5] = "";
+char vdd_xmega_ascii[5] = "";
+	
+char year_ascii[3] = "";
+char month_ascii[3] = "";
+char day_ascii[3] = "";
+char hour_ascii[3] = "";
+char minute_ascii[3] = "";
+char second_ascii[3] = "";
+
+char vbat_ascii[6] = "";
+
+	
+#define TRANSFER_DATA_SIZE 64
+char transfer_data[TRANSFER_DATA_SIZE] = ""; //currently 45 if sent as text.
 ////////////////////////////////////////////////////////////////////////////////////
 
 //AT PARSER
@@ -268,7 +261,7 @@ void at_timeout_start(uint16_t timeout);
 void at_timeout_stop();
 void response_debug(uint8_t code);
 uint8_t tx(char data[]);
-int compare_string_end(char const * str, char const suffix, int lenstr, int lensuffix);
+
 
 
 //Functions
@@ -300,124 +293,7 @@ uint8_t usart_rx_at(USART_t *usart, uint16_t timeout)
 	return ((uint8_t)(usart)->DATA);
 }
 
-uint8_t at_response_qnstatus(USART_t *usart, uint16_t timeout) {
-	
-	uint8_t len_response = 100;
-	char response[len_response];
-	uint8_t i = 0;
-	uint8_t j = 0;
-	status_at_timeout = 0;
-	uint8_t status = 1;
-	
-	//DEBUG
-	/*
-	char QNSTATUS[] = "QNSTATUS: ";
-	char STATE[] = "STATE: ";
-	//char response_ok[] = "STATE: OK";
-	//int str_len = strlen(&response_ok);
-	int LEN_QNSTATUS = strlen(&QNSTATUS);
-	int LEN_STATE = strlen(&STATE);
-		
-	//usart_putchar(USART_SERIAL_EXAMPLE, str_len+0x30);
-		
-	volatile int intcomp = 2;
-	//intcomp = memcmp(response_ok + str_len - suffix_len, suffix, suffix_len);
-	*/		
-	
-	while (status_at_timeout == 0 & i < len_response) //usually the AT command is sent in return followed by \r\n
-	{
-		response[i] = usart_rx_at(usart, timeout);
-		
-		 //intcomp = compare_string_end(response, suffix, -1, -1);
-		/*
-		 if (intcomp == 0){
-			 
-			 usart_rx_at(USART_SERIAL_EXAMPLE, ENTER_SLEEP);
-			 while (1)
-			 {
-				 led_blink(1);
-			 }
-		 }
-		 */
-		
-		if ((response[i-1] == 0x4f) & (response[i] == 0x4b)) //check if OK is in the response
-		{
-			//status = 0;
-		}
-		
-		//check if 'QNSTATUS: ' is in the response
-		if ( (response[i-10] == 0x51 & response[i-9] == 0x4e & response[i-8] == 0x53 & response[i-7] == 0x54 & response[i-6] == 0x41 & response[i-5] == 0x54 & response[i-4] == 0x55 & response[i-3] == 0x53 & response[i-2] == 0x3a & response[i-1] == 0x20) ) 
-		//if ( (memcmp(response + i - LEN_QNSTATUS, QNSTATUS, LEN_QNSTATUS)) == 0) 
-		{
-			if ((response[i] >= 0x30 & response[i] <= 0x39))
-			{
-				status = response[i] - 0x30;
-				//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-			}
-		}
-		
-		//check if 'STATE: ' is in the response
-		if ( (response[i-6] == 0x53 & response[i-5] == 0x54 & response[i-4] == 0x41 & response[i-3] == 0x54 & response[i-2] == 0x45 & response[i-1] == 0x3a & response[i] == 0x20) ) 
-		{
-			i++;
-			while (status_at_timeout == 0 & i < len_response & response[i] != 0x0d) //
-			{
-				
-				response[i] = usart_rx_at(usart, timeout);
-				i++;
-				
-				//check if 'GPRSACT' is in the response
-				if ( (response[i-6] == 0x47 & response[i-5] == 0x50 & response[i-4] == 0x52 & response[i-3] == 0x53 & response[i-2] == 0x41 & response[i-1] == 0x43 & response[i] == 0x54) ) 
-				{
-					status = 4;
-				}
-				//check if 'CONNECT OK' is in the response
-				if ( (response[i-1] == 0x4f & response[i] == 0x4b) )
-				{
-					status = 9;
-				}
-			}
-			i--;
-			
-			led_blink(1);
-			/*
-			if ((response[i] >= 0x30 & response[i] <= 0x39))
-			{
-				status = response[i] - 0x30;
-				//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-			}
-			*/
-		}
-		
-		//usart_putchar(USART_SERIAL_EXAMPLE, response[i]);
-		i++;
-	}
-	
-	/*
-	if (status_at_timeout != 0)
-	{
-		usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_ERROR);
-	}
-	*/
-	//usart_putchar(USART_SERIAL_EXAMPLE, 0x40);
-// 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-// 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-		
-	while (j<i)
-	{
-		usart_putchar(USART_SERIAL_EXAMPLE, response[j]);
-		//usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-		//usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-		j++;
-	}
-// 	usart_tx_at(USART_SERIAL_EXAMPLE, CR);
-// 	usart_tx_at(USART_SERIAL_EXAMPLE, LF);
-		
-	//usart_putchar(USART_SERIAL_EXAMPLE, resp_nr);
-	return status; //_at_timeout;
-}
 
-//void at_response(USART_t *usart, uint16_t timeout, char array[100]) {
 void at_response(USART_t *usart, uint16_t timeout, char *array_pointer) {
 	
 	uint8_t i = 0;
@@ -455,21 +331,6 @@ void rtc_init_period(uint16_t period)
 	RTC.CTRL = RTC_PRESCALER_DIV1024_gc;
 }
 
-
-void at_timeout_start(uint16_t timeout) {
-	//tc_enable(&AT_TIMEOUT_TC);	
-	AT_TIMEOUT_TC.PER = timeout; //2000 = 1 second, default ~300ms.
-	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
-	AT_TIMEOUT_TC.CNT = 0; //reset counter
-	sei(); //enable interrupt
-}
-
-void at_timeout_stop() {
-	cli(); //disable interrupt
-	tc_disable(&AT_TIMEOUT_TC);
-	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
-	
-}
 /////////////MQTT////////////////////
 int mqtt_packet(char *payload) //*payload is the original
 {
@@ -527,15 +388,30 @@ static void adc_init(void)
 {
 	struct adc_config adc_conf;
 	struct adc_channel_config adcch_conf;
+	struct adc_channel_config adcch_vdd_xmega_conf;
+	
 	adc_read_configuration(&ADC_LC, &adc_conf);
+	
 	adcch_read_configuration(&ADC_LC, ADC_LC_CH, &adcch_conf);
+	adcch_read_configuration(&ADC_LC, ADC_VDD_XMEGA_CH, &adcch_vdd_xmega_conf);
+	
 	adc_set_conversion_parameters(&adc_conf, ADC_SIGN_OFF, ADC_RES_12, ADC_REF_VCC); //vdd/1,6 ~ 2V @ 3,3V.
 	adc_set_conversion_trigger(&adc_conf, ADC_TRIG_MANUAL, 1, 0);
 	adc_set_clock_rate(&adc_conf, 200000UL);
+	
 	adcch_set_input(&adcch_conf, ADCCH_POS_PIN0, ADCCH_NEG_NONE, 1);
-	//adcch_set_input(&adcch_conf, ADCCH_POS_SCALED_VCC, ADCCH_NEG_NONE, 1);
+	adcch_set_input(&adcch_vdd_xmega_conf, ADCCH_POS_PIN1, ADCCH_NEG_NONE, 1);
+	
 	adc_write_configuration(&ADC_LC, &adc_conf);
+	
 	adcch_write_configuration(&ADC_LC, ADC_LC_CH, &adcch_conf);
+	adcch_write_configuration(&ADC_LC, ADC_VDD_XMEGA_CH, &adcch_vdd_xmega_conf);
+}
+
+uint16_t adc_result_single(ADC_t *adc, uint8_t ch_mask) {
+	adc_start_conversion(adc, ch_mask);
+	adc_wait_for_interrupt_flag(adc, ch_mask);
+	return adc_get_result(adc, ch_mask);
 }
 
 uint16_t adc_result_average (uint8_t num_avg) {
@@ -622,41 +498,26 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 }
 
 //void controller_tx(uint16_t array[TX_DATA_SIZE]) {
-void controller_tx(uint16_t *array) {
+void controller_tx(uint16_t *array_data, uint8_t *array_date) {
 	
 	uint8_t status = 0;
 	
 	//controller_next_state = RX_DATA;
-    itoa(*(array+POSITION_AVG), avg_ascii, 10); //convert to hex to lower transferred bytes.
-    itoa(*(array+POSITION_MIN), min_ascii, 10); //convert to hex to lower transferred bytes.
-    itoa(*(array+POSITION_MAX), max_ascii, 10); //convert to hex to lower transferred bytes.
-    itoa(*(array+POSITION_TRAN_MAX), tran_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(*(array_data+POSITION_AVG), avg_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(*(array_data+POSITION_MIN), min_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(*(array_data+POSITION_MAX), max_ascii, 10); //convert to hex to lower transferred bytes.
+    itoa(*(array_data+POSITION_TRAN_MAX), tran_ascii, 10); //convert to hex to lower transferred bytes.
+	itoa(*(array_data+POSITION_TIMESTAMP), timestamp_ascii, 10); //convert to hex to lower transferred bytes.
+	itoa(*(array_data+POSITION_VDD_XMEGA), vdd_xmega_ascii, 10); //convert to hex to lower transferred bytes.
     
 	/*
-	//reset parameters
-	array[0] = 0;
-	array[1] = 0;
-	array[2] = 0;
-	array[3] = 0;
-	array[4] = 0;
-	array[5] = 0;
-           
-                 
-    year = 17;
-    itoa(year, year_ascii,16);
-    month = 6;
-    itoa(month, month_ascii,16);
-    day = 7;
-    itoa(day, day_ascii,16);
-    hour = 13;
-    itoa(hour, hour_ascii,16);
-    minute++;
-    itoa(minute, minute_ascii, 16);
-    second = 0;
-    itoa(second, second_ascii,16);
-     
-	 */
-	           
+    itoa(*(array_date+POSITION_YEAR), year_ascii,10); //convert to hex to lower transferred bytes.
+    itoa(*(array_date+POSITION_MONTH), month_ascii,10); //convert to hex to lower transferred bytes.
+	itoa(*(array_date+POSITION_DAY), day_ascii,10); //convert to hex to lower transferred bytes.
+	itoa(*(array_date+POSITION_HOUR), hour_ascii,10); //convert to hex to lower transferred bytes.
+	itoa(*(array_date+POSITION_MINUTE), minute_ascii,10); //convert to hex to lower transferred bytes.
+	itoa(*(array_date+POSITION_SECOND), second_ascii,10); //convert to hex to lower transferred bytes.
+	*/           
     strcpy(transfer_data, avg_ascii);
     strcat(transfer_data, ",");
     strcat(transfer_data, min_ascii);
@@ -664,19 +525,11 @@ void controller_tx(uint16_t *array) {
     strcat(transfer_data, max_ascii);
     strcat(transfer_data, ",");
     strcat(transfer_data, tran_ascii);
-	//strcat(transfer_data, ",");
-    /*
-    strcat(transfer_data, ",");
-    strcat(transfer_data, year_ascii);
-    strcat(transfer_data, month_ascii);
-    strcat(transfer_data, day_ascii);
-    strcat(transfer_data, hour_ascii);
-    strcat(transfer_data, minute_ascii);
-    strcat(transfer_data, second_ascii);
-    */
-
+	strcat(transfer_data, ",");
+	strcat(transfer_data, timestamp_ascii);
+	strcat(transfer_data, ",");
+	strcat(transfer_data, vdd_xmega_ascii);
 	
-
     usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
 	int i=0;
 	while(transfer_data[i] != 0x00) {
@@ -698,7 +551,19 @@ void reset_tx_data(uint16_t *array) {
 	*(array+POSITION_AVG) = 0;
 	*(array+POSITION_MIN) = MIN_DATA_RESET;
 	*(array+POSITION_MAX) = 0;
+	*(array+POSITION_TIMESTAMP) = 0;
 	*(array+POSITION_ACCU_CNT) = 0;
+	
+}
+
+void reset_tx_date(uint8_t *array) {
+	*(array+POSITION_YEAR) = 0;
+	*(array+POSITION_MONTH) = 1;
+	*(array+POSITION_DAY) = 1;
+	*(array+POSITION_HOUR) = 0;
+	*(array+POSITION_MINUTE) = 0;
+	*(array+POSITION_SECOND) = 0;
+	
 	
 }
 
@@ -762,27 +627,34 @@ void reset_char_array(char *array_pointer , uint8_t size) {
 	}
 }
 
-uint8_t tx(char data[TX_DATA_SIZE]) {
+
+//uint8_t tx(char data[TX_DATA_SIZE]) {
+uint8_t tx(char *data) {
 	
-	uint8_t status = 0;
-	uint8_t traials = 0;
+	uint8_t status = 0; //tx status, 0 = alles ok.
+	uint8_t tx_at_cnt = 0; //nr of AT command sent
+	char *ret; //response pointer
+	
 	//AT+CREG??????????
 	
 	//SETTING RESPONSE FORMAT
-	#define ATV0 "ATV0\r" //response format is numbers
-	#define ATV1 "ATV1\r" //response format is text
+// 	#define ATV0 "ATV0\r" //response format is numbers
+// 	#define ATV1 "ATV1\r" //response format is text
 	
-	uint8_t tx_status = 0;
 	
- 	char *ret;
 	ret = 0;
-	while (ret == 0)
+	while ( (ret == 0) & (tx_at_cnt < AT_REPEAT)) //9*300ms ~ 3s
 	{
 		reset_char_array(&response, RESPONSE_SIZE);
 		usart_tx_at(USART_SERIAL_SIM900, AT_QNSTATUS); //return +QNSTATUS: n, where 0 is ok.
 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 		ret = strstr(response, "QNSTATUS: 0");
-		delay_ms(300);
+		delay_ms(1000);
+		tx_at_cnt++;
+	}
+	if (tx_at_cnt == AT_REPEAT)
+	{
+		return status = 1;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response); //DEBUG
 	
@@ -842,7 +714,8 @@ uint8_t tx(char data[TX_DATA_SIZE]) {
 	
 	//CHECK IP STATUS
 	ret = 0;
-	while (ret == 0)
+	tx_at_cnt = 0;
+	while ( (ret == 0) & (tx_at_cnt < AT_REPEAT)) //9*300ms ~ 3s
 	{
 		reset_char_array(&response, RESPONSE_SIZE);
 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
@@ -850,36 +723,47 @@ uint8_t tx(char data[TX_DATA_SIZE]) {
 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 		ret = strstr(response, "IP START");
 		delay_ms(300);
+		tx_at_cnt++;
+	}
+	if (tx_at_cnt == AT_REPEAT)
+	{
+		return status = 8;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 
 	reset_char_array(&response, RESPONSE_SIZE);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QIACT); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_20S, &response);
-// 	if (!strstr(response, "OK"))
-// 	{
-// 		usart_tx_at(USART_SERIAL_EXAMPLE, response);
-// 		return status = 9;
-// 		
-// 	}
+	if (!strstr(response, "QIACT"))
+	{
+		usart_tx_at(USART_SERIAL_EXAMPLE, response);
+		return status = 9;
+		
+	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 	
 	//Need local IP
 	ret = 0;
-	while (ret == 0)
+	tx_at_cnt = 0;
+	while ( (ret == 0) & (tx_at_cnt < AT_REPEAT)) //9*300ms ~ 3s
 	{
 		reset_char_array(&response, RESPONSE_SIZE);
 		usart_tx_at(USART_SERIAL_SIM900, AT_QILOCIP); //return OK //fix response
 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 		ret = strstr(response, LOCAL_IP);
-	
-		delay_s(1);
+		delay_ms(300);
+		tx_at_cnt++;
+	}
+	if (tx_at_cnt == AT_REPEAT)
+	{
+		return status = 10;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 		
 	//CHECK IP STATUS
 	ret = 0;
-	while (ret == 0)
+	tx_at_cnt = 0;
+	while ( (ret == 0) & (tx_at_cnt < AT_REPEAT)) //9*300ms ~ 3s
 	{
 		reset_char_array(&response, RESPONSE_SIZE);
 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
@@ -887,6 +771,11 @@ uint8_t tx(char data[TX_DATA_SIZE]) {
 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 		ret = strstr(response, "CONNECT OK") || strstr(response, "IP INITIAL") || strstr(response, "IP STATUS") || strstr(response, "IP CLOSE");
 		delay_ms(300);
+		tx_at_cnt++;
+	}
+	if (tx_at_cnt == AT_REPEAT)
+	{
+		return status = 11;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 
@@ -910,41 +799,98 @@ uint8_t tx(char data[TX_DATA_SIZE]) {
 	
 	//CHECK IP STATUS
 	ret = 0;
-	while (ret == 0)
+	tx_at_cnt = 0;
+	while ( (ret == 0) & (tx_at_cnt < AT_REPEAT)) //9*300ms ~ 3s
 	{
 		reset_char_array(&response, RESPONSE_SIZE);
 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-		//tx_status = at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 		ret = strstr(response, "CONNECT OK");
 		delay_ms(300);
+		tx_at_cnt++;
+	}
+	if (tx_at_cnt == AT_REPEAT)
+	{
+		return status = 14;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
+	
+	//FETCH TIME FROM NETWORK HERE!!!!
+	//IF NOT SEND TIMESTAMP
+	ret = 0;
+	tx_at_cnt = 0;
+	while ( (tx_at_cnt < AT_REPEAT) & (*(ret+20) == 0x00) ) //9*300ms ~ 3s
+	{
+		reset_char_array(&response, RESPONSE_SIZE);
+		usart_tx_at(USART_SERIAL_SIM900, AT_QLTS); //return +QNSTATUS: n, where 0 is ok.
+		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
+		ret = strstr(response, "QLTS: ");
+		delay_ms(300);
+		tx_at_cnt++;
+	}
+	if (tx_at_cnt == AT_REPEAT)
+	{
+		return status = 15;
+	}
+	usart_tx_at(USART_SERIAL_EXAMPLE, response); //DEBUG
+	//Store time and date in registers, and also append to tx data.
+	year_ascii[0] = *(ret+7);
+	year_ascii[1] = *(ret+8);
+	strcat(data, ",");
+	strcat(data, year_ascii);
+	tx_date[POSITION_YEAR] = atoi(year_ascii);
+	month_ascii[0] = *(ret+10);
+	month_ascii[1] = *(ret+11);
+	strcat(data, ",");
+	strcat(data, month_ascii);
+	tx_date[POSITION_MONTH] = atoi(month_ascii);
+	day_ascii[0] = *(ret+13);
+	day_ascii[1] = *(ret+14);
+	strcat(data, ",");
+	strcat(data, day_ascii);
+	tx_date[POSITION_DAY] = atoi(day_ascii);
+	hour_ascii[0] = *(ret+16);
+	hour_ascii[1] = *(ret+17);
+	strcat(data, ",");
+	strcat(data, hour_ascii);
+	tx_date[POSITION_HOUR] = atoi(hour_ascii);
+	minute_ascii[0] = *(ret+19);
+	minute_ascii[1] = *(ret+20);
+	strcat(data, ",");
+	strcat(data, minute_ascii);
+	tx_date[POSITION_MINUTE] = atoi(minute_ascii);
+	second_ascii[0] = *(ret+22);
+	second_ascii[1] = *(ret+23);
+	strcat(data, ",");
+	strcat(data, second_ascii);
+	tx_date[POSITION_SECOND] = atoi(second_ascii);
+	usart_tx_at(USART_SERIAL_EXAMPLE, data); //DEBUG
+	///////////////////////////////////////////////////////////////////////////////////////
+
+	//COMMENT OUT IF SENDING TO SERVER IS ENABLED
+	return status = 32;
+	///////////////////////////////////////
 	
 	reset_char_array(&response, RESPONSE_SIZE);
 	usart_tx_at(USART_SERIAL_SIM900, AT_QISEND); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 	if (!strstr(response, ">"))
 	{
-		return status = 15;
+		return status = 16;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 			
-	//char* AT_MESSAGE2 = "2213 10:33:22";
 	char* AT_MESSAGE2 = data;
 		
-// 	while (1)
-// 	{
-//  	}
 	mqtt_packet(AT_MESSAGE2);
-	delay_ms(300);
+	delay_ms(100);
 	
 	reset_char_array(&response, RESPONSE_SIZE);
 	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z); //return OK
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 	if (!strstr(response, "OK"))
 	{
-		return status = 16;
+		return status = 17;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 	
@@ -953,7 +899,7 @@ uint8_t tx(char data[TX_DATA_SIZE]) {
 	at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
 	if (!strstr(response, "OK"))
 	{
-		return status = 17;
+		return status = 18;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 	
@@ -963,7 +909,7 @@ uint8_t tx(char data[TX_DATA_SIZE]) {
 	if (!strstr(response, "OK"))
 	{
 		usart_tx_at(USART_SERIAL_EXAMPLE, response);
-		return status = 18;
+		return status = 19;
 	}
 	usart_tx_at(USART_SERIAL_EXAMPLE, response);
 	
@@ -980,16 +926,17 @@ ISR(TCC0_OVF_vect) {
 ISR(RTC_OVF_vect)
 {
 	cli(); //disable interrupts. Other way of disabling and resetting?
-	//rtc_data.counter_high++;
-	
-	led_blink(100);
+		
+	led_blink(50); //DEBUG
 	
 	
 	if (controller_state == MEASURE)
 	{
 		accu_data += controller_measure(9, &tx_data); //measure with averaging, and accumulate.
+		tx_data[POSITION_VDD_XMEGA] = adc_result_single(&ADC_LC, ADC_VDD_XMEGA_CH);
 	}
 	
+	tx_data[POSITION_TIMESTAMP]++; //increase timestamp counter.
 	tx_data[POSITION_ACCU_CNT]++; //increase accumulation counter.
 				
 	if (tx_data[POSITION_ACCU_CNT] > (TAVG/TS)) //if accumulation limit is reached.
@@ -1001,15 +948,7 @@ ISR(RTC_OVF_vect)
 		tx_data[POSITION_ACCU_CNT] = 0;
 		
 		controller_state = TX_DATA;
-		
-		//debug
-		/*
-		itoa(avg_data, loadcell_adc_result_ascii, 10); //convert to hex to lower transferred bytes.
-		strcpy(transfer_data, loadcell_adc_result_ascii);
-		usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-		usart_tx_at(USART_SERIAL_EXAMPLE, transfer_data);
-		usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_HEADER);
-		*/
+
 	}
 	
 	if (controller_state == TX_DATA)
@@ -1025,15 +964,9 @@ ISR(RTC_OVF_vect)
 		
 		
 		
-		controller_tx(&tx_data);
+		controller_tx(&tx_data, &tx_date);
 		reset_tx_data(&tx_data);
-		//tx(&tx_data);
-		//DEBUG
-// 		usart_tx_at(USART_SERIAL_SIM900, AT_QISTAT); //return OK
-// 		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M);
-	
-				
-		
+
 		//radio power down
 		radio_power_down();
 		
@@ -1041,8 +974,6 @@ ISR(RTC_OVF_vect)
 		
 	}
 	
-	//usart_putchar(USART_SERIAL_EXAMPLE, 0x30+accu_data_cnt);
-	//WRITE RTC value = 0!
 	RTC.CNT = 0;
 	sei(); //enable interrupt, go to sleep
 }
@@ -1104,47 +1035,39 @@ int main(void)
 	
 	//Shut down radio if already awake
 	radio_pins_init();
+	delay_s(1);
+	uint8_t cnt_pwrdwn = 0;
 	//check if status is off
 	if (STATUS_PORT.IN & (1<<STATUS_PIN))
 	{
 		radio_power_down();
-		while ((STATUS_PORT.IN & (1<<STATUS_PIN)))
+		while ((STATUS_PORT.IN & (1<<STATUS_PIN)) & cnt_pwrdwn < 27)
 		{
-			//just wait and drink coffe....
+			delay_ms(300);
+			cnt_pwrdwn++;
+		}
+		
+		if (cnt_pwrdwn == 27)
+		{
+			#define AT_QPOWD "AT+QPOED\r"
+			reset_char_array(&response, RESPONSE_SIZE);
+			usart_tx_at(USART_SERIAL_SIM900, AT_QPOWD); //return OK
+			at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
+			usart_tx_at(USART_SERIAL_EXAMPLE, response);
 		}
 	}
 	 	
 	////////////////////////////////////////////////////////
 		
 	
-	/*
-		tc_enable(&TCC0);	
-		//tc_set_overflow_interrupt_callback(&TCC0, my_callback);
-		tc_set_wgm(&TCC0, TC_WG_NORMAL);
-		tc_write_period(&TCC0, 1000);
-		tc_set_overflow_interrupt_level(&TCC0, TC_INT_LVL_LO);
-		cpu_irq_enable();
-		//tc_write_clock_source(&TCC0, TC_CLKSEL_DIV1_gc);
- 	//at_command_timeout_setup();
-	 //PR.PRPC &= ~(1<<0); //TCC0
-	//AT_TIMEOUT_TC.INTCTRLA |= (0<<0); //disable counter
-	//AT_TIMEOUT_TC.INTCTRLA |= (1<<0);
-	AT_TIMEOUT_TC.CTRLA = TC_CLKSEL_DIV1024_gc;
-	//AT_TIMEOUT_TC.CTRLB |= 0b000;
-	//AT_TIMEOUT_TC.PER = 700; //2000 = 1 second, default ~300ms.
-	AT_TIMEOUT_TC.INTFLAGS |= (1<<0); //clear ovf flag
-	AT_TIMEOUT_TC.CNT = 0; //reset counter
-// 	//sysclk_enable_module(SYSCLK_PORT_C, 0);
-// 	  sysclk_enable_module(SYSCLK_PORT_C, SYSCLK_TC0);
-// 	  sysclk_enable_module(SYSCLK_PORT_C, SYSCLK_HIRES);
-		*/
 	sei();
 	
-	//WDT setup
+	//WDT setup for interrupt
 	
 	
 	//reset data
 	reset_tx_data(&tx_data);
+	reset_tx_date(&tx_date);
 	
 	//RTC
 	PR.PRGEN &= ~(1<<2); //enable the RTC clock
