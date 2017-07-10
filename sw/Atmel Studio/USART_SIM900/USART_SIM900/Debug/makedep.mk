@@ -34,6 +34,8 @@ src\MQTTUnsubscribeClient.c
 
 src\MQTTUnsubscribeServer.c
 
+src\MQTT_functions.c
+
 src\umqtt.c
 
 src\ASF\common\services\clock\xmega\sysclk.c
@@ -52,5 +54,5 @@ src\ASF\xmega\drivers\usart\usart.c
 
 src\at_parser.c
 
-src\usart_example.c
+src\main.c
 

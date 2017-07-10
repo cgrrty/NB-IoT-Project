@@ -90,6 +90,7 @@ C_SRCS +=  \
 ../src/MQTTSubscribeServer.c \
 ../src/MQTTUnsubscribeClient.c \
 ../src/MQTTUnsubscribeServer.c \
+../src/MQTT_functions.c \
 ../src/umqtt.c \
 ../src/ASF/common/services/clock/xmega/sysclk.c \
 ../src/ASF/common/services/ioport/xmega/ioport_compat.c \
@@ -97,7 +98,7 @@ C_SRCS +=  \
 ../src/ASF/xmega/drivers/nvm/nvm.c \
 ../src/ASF/xmega/drivers/usart/usart.c \
 ../src/at_parser.c \
-../src/usart_example.c
+../src/main.c
 
 
 PREPROCESSING_SRCS +=  \
@@ -125,6 +126,7 @@ src/MQTTSubscribeClient.o \
 src/MQTTSubscribeServer.o \
 src/MQTTUnsubscribeClient.o \
 src/MQTTUnsubscribeServer.o \
+src/MQTT_functions.o \
 src/umqtt.o \
 src/ASF/common/services/clock/xmega/sysclk.o \
 src/ASF/common/services/ioport/xmega/ioport_compat.o \
@@ -134,7 +136,7 @@ src/ASF/xmega/drivers/nvm/nvm.o \
 src/ASF/xmega/drivers/nvm/nvm_asm.o \
 src/ASF/xmega/drivers/usart/usart.o \
 src/at_parser.o \
-src/usart_example.o
+src/main.o
 
 OBJS_AS_ARGS +=  \
 src/ASF/common/services/sleepmgr/xmega/sleepmgr.o \
@@ -153,6 +155,7 @@ src/MQTTSubscribeClient.o \
 src/MQTTSubscribeServer.o \
 src/MQTTUnsubscribeClient.o \
 src/MQTTUnsubscribeServer.o \
+src/MQTT_functions.o \
 src/umqtt.o \
 src/ASF/common/services/clock/xmega/sysclk.o \
 src/ASF/common/services/ioport/xmega/ioport_compat.o \
@@ -162,7 +165,7 @@ src/ASF/xmega/drivers/nvm/nvm.o \
 src/ASF/xmega/drivers/nvm/nvm_asm.o \
 src/ASF/xmega/drivers/usart/usart.o \
 src/at_parser.o \
-src/usart_example.o
+src/main.o
 
 C_DEPS +=  \
 src/ASF/common/services/sleepmgr/xmega/sleepmgr.d \
@@ -181,6 +184,7 @@ src/MQTTSubscribeClient.d \
 src/MQTTSubscribeServer.d \
 src/MQTTUnsubscribeClient.d \
 src/MQTTUnsubscribeServer.d \
+src/MQTT_functions.d \
 src/umqtt.d \
 src/ASF/common/services/clock/xmega/sysclk.d \
 src/ASF/common/services/ioport/xmega/ioport_compat.d \
@@ -190,7 +194,7 @@ src/ASF/xmega/drivers/nvm/nvm.d \
 src/ASF/xmega/drivers/nvm/nvm_asm.d \
 src/ASF/xmega/drivers/usart/usart.d \
 src/at_parser.d \
-src/usart_example.d
+src/main.d
 
 C_DEPS_AS_ARGS +=  \
 src/ASF/common/services/sleepmgr/xmega/sleepmgr.d \
@@ -209,6 +213,7 @@ src/MQTTSubscribeClient.d \
 src/MQTTSubscribeServer.d \
 src/MQTTUnsubscribeClient.d \
 src/MQTTUnsubscribeServer.d \
+src/MQTT_functions.d \
 src/umqtt.d \
 src/ASF/common/services/clock/xmega/sysclk.d \
 src/ASF/common/services/ioport/xmega/ioport_compat.d \
@@ -218,7 +223,7 @@ src/ASF/xmega/drivers/nvm/nvm.d \
 src/ASF/xmega/drivers/nvm/nvm_asm.d \
 src/ASF/xmega/drivers/usart/usart.d \
 src/at_parser.d \
-src/usart_example.d
+src/main.d
 
 OUTPUT_FILE_PATH +=USART_SIM900.elf
 
@@ -234,6 +239,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

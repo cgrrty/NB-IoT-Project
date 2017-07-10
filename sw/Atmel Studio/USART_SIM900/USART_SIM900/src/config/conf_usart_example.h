@@ -61,11 +61,17 @@
 //! @}
 
 //! @{
-#define USART_SERIAL_SIM900				&USARTC0 //&USARTC0 //EXT1
-#define USART_SERIAL_SIM900_BAUDRATE    19200 //baud rate for sim900
-#define USART_SERIAL_SIM900_CHAR_LENGTH USART_CHSIZE_8BIT_gc
-#define USART_SERIAL_SIM900_PARITY      USART_PMODE_DISABLED_gc
-#define USART_SERIAL_SIM900_STOP_BIT    true
-//! @}
 
+#define USART_SERIAL_SIM900				&USARTC0 //
+#define USART_EXT_DATA					&USARTF0 //
+
+// USART for debug (COM port)
+static usart_rs232_options_t USART_SERIAL_OPTIONS = {
+	.baudrate = USART_SERIAL_EXAMPLE_BAUDRATE,
+	.charlength = USART_SERIAL_CHAR_LENGTH,
+	.paritytype = USART_SERIAL_PARITY,
+	.stopbits = USART_SERIAL_STOP_BIT
+};
+
+///////////////////////////////
 #endif // _CONF_USART_EXAMPLE_H

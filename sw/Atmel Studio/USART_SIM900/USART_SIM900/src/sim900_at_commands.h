@@ -13,7 +13,7 @@
 
 //Special AT characters
 #define CR "\r" //carriage return
-#define CR_UINT8 0x0d
+//#define CR_UINT8 0x0d
 #define LF "\n" //line feed
 #define CR_UINT8 0x0a
 #define CTRL_Z "\x1a" //ctrl+z
@@ -47,19 +47,40 @@ char *AT_CIPSTART[] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SE
 								//It must be terminated with ctrl+z.
 								//There will be a response from the server.
 
+	//AT+CREG??????????
+	
+	//SETTING RESPONSE FORMAT
+// 	#define ATV0 "ATV0\r" //response format is numbers
+// 	#define ATV1 "ATV1\r" //response format is text
+
+
+//the number of times an AT command will be sent and the delay between repeats.
+#define AT_REPEAT 9
+#define AT_REPEAT_LONG 27
+#define AT_REPEAT_DELAY 300 //in ms.
 
 //M95 response times
-#define RESPONSE_TIME_300M 700 //300ms
-#define RESPONSE_TIME_20S 40000 //20sec 
+#define RESPONSE_TIME_300M 300 //300ms
+#define RESPONSE_TIME_20S 20000 //20sec 
 
 //AT TCP/IP commands M95
 #define AT_QICLOSE "AT+QICLOSE\r"  //Same as AT_CIPSHUT, check notes in app note
-#define AT_QISTAT "AT+QISTAT\r" //Same as AT_CIPSTATUS, or...A LOT OF STAT COMMANDS!!!! CHECK OUT!!!!!
+#define AT_QISTAT "AT+QISTAT\r"
+#define AT_QISTAT_COMPARE_IP_START "IP START"
+#define AT_QISTAT_COMPARE_CONNECT_OK "CONNECT OK"
+#define AT_QISTAT_COMPARE_IP_INITIAL "IP INITIAL"
+#define AT_QISTAT_COMPARE_IP_STATUS "IP STATUS"
+#define AT_QISTAT_COMPARE_IP_CLOSE "IP CLOSE"
+#define AT_QPOWD "AT+QPOED\r"
 
 
 //network and radio status
 #define AT_QNSTATUS "AT+QNSTATUS\r"
+#define AT_QNSTATUS_COMPARE "QNSTATUS: 0"
+
 #define AT_QLTS "AT+QLTS\r" //Time and date from network.
+#define AT_QLTS_COMPARE "QLTS: "
+#define AT_QLTS_START 18 //if response is ok the time starts at position 18.
 #define AT_CBC "AT+CBC\r" //battery voltage
 
 //ch 3.1 in TCP/IP app note
@@ -72,12 +93,14 @@ char *AT_CIPSTART[] = {AT_CIPSTART_INIT,QUOTE,IP_MODE,DELIM,SERVER_ADDR,DELIM,SE
 //ch 3.2 in TCP/IP app note
 #define AT_QIREGAPP "AT+QIREGAPP\r"
 #define AT_QIACT "AT+QIACT\r"
+#define AT_QIACT_COMPARE "QIACT"
 #define AT_QILOCIP "AT+QILOCIP\r"
 #define AT_QIOPEN "AT+QIOPEN=\"TCP\",\"10.18.0.39\",1883\r"
 
 //CH 3.4 in tcp/ip app note
 #define AT_QISRVC "AT+QISRVC=1\r"
 #define AT_QISEND "AT+QISEND\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
+#define AT_QISEND_COMPARE ">"
 //It must be terminated with ctrl+z.
 //There will be a response from the server.
 
