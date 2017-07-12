@@ -420,7 +420,10 @@
     <None Include="src\config\conf_rtc.h">
       <SubType>compile</SubType>
     </None>
-    <Compile Include="src\loadcell_logger_setup.h">
+    <Compile Include="src\loadcell_logger.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\loadcell_logger.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.h">

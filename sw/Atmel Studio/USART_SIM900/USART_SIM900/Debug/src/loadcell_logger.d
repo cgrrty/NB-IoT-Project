@@ -1,10 +1,13 @@
-src/main.d src/main.o: ../src/main.c ../src/main.h ../src/asf.h \
- ../src/ASF/xmega/drivers/adc/adc.h ../src/ASF/xmega/utils/compiler.h \
+src/loadcell_logger.d src/loadcell_logger.o: ../src/loadcell_logger.c \
+ ../src/loadcell_logger.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdint.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h \
+ ../src/asf.h ../src/ASF/xmega/drivers/adc/adc.h \
+ ../src/ASF/xmega/utils/compiler.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\io.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sfr_defs.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\inttypes.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdint.h \
  C:\Program\ Files\ (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\include/avr/iox128a1u.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\portpins.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\common.h \
@@ -59,18 +62,15 @@ src/main.d src/main.o: ../src/main.c ../src/main.h ../src/asf.h \
  ../src/ASF/xmega/drivers/usart/usart.h \
  ../src/ASF/xmega/drivers/wdt/wdt.h \
  ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/xmega_a1u_xplained_pro.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h \
- ../src/MQTT_functions.h ../src/MQTTPacket.h ../src/MQTTConnect.h \
- ../src/MQTTPublish.h ../src/MQTTSubscribe.h ../src/MQTTUnsubscribe.h \
- ../src/MQTTFormat.h ../src/StackTrace.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h \
- ../src/config/conf_usart_example.h ../src/config/conf_board.h \
- ../src/quectel_m95.h ../src/user_network_params.h \
- ../src/loadcell_logger.h
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h
 
-../src/main.h:
+../src/loadcell_logger.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdint.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h:
 
 ../src/asf.h:
 
@@ -83,10 +83,6 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sfr_defs.h:
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\inttypes.h:
-
-c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint.h:
-
-c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdint.h:
 
 C:\Program\ Files\ (x86)\Atmel\Studio\7.0\Packs\atmel\XMEGAA_DFP\1.1.68\include/avr/iox128a1u.h:
 
@@ -209,35 +205,3 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/xmega_a1u_xplained_pro.h:
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h:
-
-c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h:
-
-../src/MQTT_functions.h:
-
-../src/MQTTPacket.h:
-
-../src/MQTTConnect.h:
-
-../src/MQTTPublish.h:
-
-../src/MQTTSubscribe.h:
-
-../src/MQTTUnsubscribe.h:
-
-../src/MQTTFormat.h:
-
-../src/StackTrace.h:
-
-c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h:
-
-c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h:
-
-../src/config/conf_usart_example.h:
-
-../src/config/conf_board.h:
-
-../src/quectel_m95.h:
-
-../src/user_network_params.h:
-
-../src/loadcell_logger.h:

@@ -14,6 +14,8 @@ src\ASF\xmega\drivers\tc\tc.c
 
 src\ASF\xmega\drivers\wdt\wdt.c
 
+src\loadcell_logger.c
+
 src\MQTTConnectClient.c
 
 src\MQTTConnectServer.c

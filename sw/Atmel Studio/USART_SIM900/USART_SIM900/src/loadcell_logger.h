@@ -9,6 +9,11 @@
 #ifndef LOADCELL_LOGGER_SETUP_H_
 #define LOADCELL_LOGGER_SETUP_H_
 
+#include "stdint.h"
+#include "math.h"
+#include "asf.h"
+#include "string.h"
+
 //sampling and averaging times
 #define SAMPLING_TIME 1
 #define AVERAGING_TIME 2
@@ -26,4 +31,6 @@
 //Reset values that differs from initial setup
 #define RESET_VALUE_MIN 0xffff
 
+//DEFINITION OF FUNCTIONS
+uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array);
 #endif /* LOADCELL_LOGGER_SETUP_H_ */

@@ -80,6 +80,7 @@ C_SRCS +=  \
 ../src/ASF/xmega/drivers/rtc/rtc.c \
 ../src/ASF/xmega/drivers/tc/tc.c \
 ../src/ASF/xmega/drivers/wdt/wdt.c \
+../src/loadcell_logger.c \
 ../src/MQTTConnectClient.c \
 ../src/MQTTConnectServer.c \
 ../src/MQTTDeserializePublish.c \
@@ -115,6 +116,7 @@ src/ASF/xmega/drivers/adc/xmega_aau/adc_aau.o \
 src/ASF/xmega/drivers/rtc/rtc.o \
 src/ASF/xmega/drivers/tc/tc.o \
 src/ASF/xmega/drivers/wdt/wdt.o \
+src/loadcell_logger.o \
 src/MQTTConnectClient.o \
 src/MQTTConnectServer.o \
 src/MQTTDeserializePublish.o \
@@ -143,6 +145,7 @@ src/ASF/xmega/drivers/adc/xmega_aau/adc_aau.o \
 src/ASF/xmega/drivers/rtc/rtc.o \
 src/ASF/xmega/drivers/tc/tc.o \
 src/ASF/xmega/drivers/wdt/wdt.o \
+src/loadcell_logger.o \
 src/MQTTConnectClient.o \
 src/MQTTConnectServer.o \
 src/MQTTDeserializePublish.o \
@@ -171,6 +174,7 @@ src/ASF/xmega/drivers/adc/xmega_aau/adc_aau.d \
 src/ASF/xmega/drivers/rtc/rtc.d \
 src/ASF/xmega/drivers/tc/tc.d \
 src/ASF/xmega/drivers/wdt/wdt.d \
+src/loadcell_logger.d \
 src/MQTTConnectClient.d \
 src/MQTTConnectServer.d \
 src/MQTTDeserializePublish.d \
@@ -199,6 +203,7 @@ src/ASF/xmega/drivers/adc/xmega_aau/adc_aau.d \
 src/ASF/xmega/drivers/rtc/rtc.d \
 src/ASF/xmega/drivers/tc/tc.d \
 src/ASF/xmega/drivers/wdt/wdt.d \
+src/loadcell_logger.d \
 src/MQTTConnectClient.d \
 src/MQTTConnectServer.d \
 src/MQTTDeserializePublish.d \
@@ -234,6 +239,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

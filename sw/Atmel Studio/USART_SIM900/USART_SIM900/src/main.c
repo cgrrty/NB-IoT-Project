@@ -294,41 +294,6 @@ uint16_t adc_result_average (ADC_t *adc, uint8_t adc_ch ,uint8_t adc_pin, uint8_
 	return res;	
 }
 
-uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
-	//USING THE POSITIONS DEFINED IN THE LOADCELL HEADER FILE.
-	
-	//find tran
-	signed int tran = 0; //could go positive and negative, and could store a 15 bits number, hence enough for our 12 bits results.
-	uint16_t tran_abs = 0;
-		 
-	tran = current_value - *(data_array + POSITION_PREV); //tran = current - previous
-	if ((abs(tran) > abs(*(data_array+POSITION_TRAN_MAX))) & (*(data_array+POSITION_ACCU_CNT) > 0)) //first step is not valid due to only one value.
-    {
-        if (tran < 0)
-        {
-			tran_abs = abs(tran); //check if >2047, if yes this is the max limit that could be transferred.
-			if (tran_abs >= 0x7ff) //if yes the set to max value
-			{
-				tran_abs = 0x7ff;
-			}
-			tran_abs |= (1<<11); //flip the MSB of the 12 bits word to set the negative sign.
-			tran = tran_abs;
-        }
-		
-		*(data_array+POSITION_TRAN_MAX) = tran; //store new tran max.
-	}
-	
-	//find min and max
-    if (current_value < *(data_array+POSITION_MIN))
-    {
-        *(data_array+POSITION_MIN) = current_value; //store new min value.
-    }
-    if (current_value > *(data_array+POSITION_MAX))
-    {
-        *(data_array+POSITION_MAX) = current_value; //Store new max.
-    }
-}
-
 uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 	 uint16_t avg = 0;
 	 
@@ -599,8 +564,7 @@ uint8_t at_rf_connect(void) {
 	
 	uint8_t status = 0;
 	uint8_t i = 0;
-	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
-	while ( i < 14 )
+	while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
 	{
 		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
 		i++;
@@ -621,8 +585,7 @@ uint8_t at_rf_disconnect(void) {
 	*/
 	uint8_t status = 0;
 	uint8_t i = 0;
-	//while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
-	while (i < 2)
+	while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
 	{
 		if (tx_at_response(&m95_disconnect[i])) {/*goto END;*/}
 		i++;
@@ -649,7 +612,8 @@ uint8_t tx(char *data, int len) {
 		#endif // DEBUG
 		i++;
 	}
-	if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
+	usart_tx_at(USART_SERIAL_SIM900, CTRL_Z);
+	//if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
 			
 	END: return status;
 }
@@ -734,24 +698,22 @@ ISR(RTC_OVF_vect)
 				break;
 			
 			case RF_POWER_ON:
-				radio_power_on(); //DEBUG
-// 				if (radio_power_on() == 1) //power on and check if it fails
-// 				{
-// 					//tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
-// 					//controller_next_state = RF_POWER_OFF; //if failure go to power off
-// 					//break;
-// 				}
+				if (radio_power_on() == 1) //power on and check if it fails
+				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
+					controller_next_state = RF_POWER_OFF; //if failure go to power off
+					break;
+				}
 				controller_next_state = RF_CONNECT;
 				break;
 				
 			case RF_CONNECT:
-				at_rf_connect(); //DEBUG
-// 				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
-// 				{
-// 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
-// 					controller_next_state = RF_DISCONNECT; //if failure go to disconnect
-// 					break;
-// 				}
+				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
+				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
+					controller_next_state = RF_DISCONNECT; //if failure go to disconnect
+					break;
+ 				}
 				controller_next_state = GENERATE_PACKAGE;
 				break;
 				
@@ -759,11 +721,11 @@ ISR(RTC_OVF_vect)
 				data_to_char(&tx_data, TX_DATA_SIZE, &tx_data_bytes, TRANSFER_DATA_BASE);
  				transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
 				#ifdef DEBUG //output package size
-// 					char package_lenght[5] = "";
-// 					char mystring[5] = "";
-// 					itoa(transfer_data_length_package, package_lenght, 10);
-// 					strcpy(mystring, package_lenght);
-// 					usart_tx_at(USART_SERIAL_EXAMPLE, mystring);
+					char package_lenght[5] = "";
+					char mystring[5] = "";
+					itoa(transfer_data_length_package, package_lenght, 10);
+					strcpy(mystring, package_lenght);
+					usart_tx_at(USART_SERIAL_EXAMPLE, mystring);
 				#endif // DEBUG
 				controller_next_state = TX_DATA;
 				break;

@@ -25,7 +25,7 @@
 #include "quectel_m95.h"
 
 //EXTERNAL SENSOR SETUP
-#include "loadcell_logger_setup.h"
+#include "loadcell_logger.h"
 
 //function declarations:
 void reset_char_array(char *array_pointer , uint8_t size);
