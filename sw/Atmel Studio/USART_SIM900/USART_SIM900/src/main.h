@@ -22,7 +22,7 @@
 #include "conf_usart_example.h"
 
 //RADIO SETUP
-#include "sim900_at_commands.h"
+#include "quectel_m95.h"
 
 //EXTERNAL SENSOR SETUP
 #include "loadcell_logger_setup.h"

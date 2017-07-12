@@ -52,7 +52,5 @@ src\ASF\xmega\drivers\nvm\nvm_asm.s
 
 src\ASF\xmega\drivers\usart\usart.c
 
-src\at_parser.c
-
 src\main.c
 

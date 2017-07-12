@@ -630,10 +630,7 @@
     <None Include="src\ASF\xmega\utils\compiler.h">
       <SubType>compile</SubType>
     </None>
-    <Compile Include="src\at_parser.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\sim900_at_commands.h">
+    <Compile Include="src\quectel_m95.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.c">

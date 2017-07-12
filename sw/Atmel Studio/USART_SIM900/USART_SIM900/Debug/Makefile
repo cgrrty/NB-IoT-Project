@@ -97,7 +97,6 @@ C_SRCS +=  \
 ../src/ASF/xmega/boards/xmega_a1u_xplained_pro/board_init.c \
 ../src/ASF/xmega/drivers/nvm/nvm.c \
 ../src/ASF/xmega/drivers/usart/usart.c \
-../src/at_parser.c \
 ../src/main.c
 
 
@@ -135,7 +134,6 @@ src/ASF/xmega/drivers/cpu/ccp.o \
 src/ASF/xmega/drivers/nvm/nvm.o \
 src/ASF/xmega/drivers/nvm/nvm_asm.o \
 src/ASF/xmega/drivers/usart/usart.o \
-src/at_parser.o \
 src/main.o
 
 OBJS_AS_ARGS +=  \
@@ -164,7 +162,6 @@ src/ASF/xmega/drivers/cpu/ccp.o \
 src/ASF/xmega/drivers/nvm/nvm.o \
 src/ASF/xmega/drivers/nvm/nvm_asm.o \
 src/ASF/xmega/drivers/usart/usart.o \
-src/at_parser.o \
 src/main.o
 
 C_DEPS +=  \
@@ -193,7 +190,6 @@ src/ASF/xmega/drivers/cpu/ccp.d \
 src/ASF/xmega/drivers/nvm/nvm.d \
 src/ASF/xmega/drivers/nvm/nvm_asm.d \
 src/ASF/xmega/drivers/usart/usart.d \
-src/at_parser.d \
 src/main.d
 
 C_DEPS_AS_ARGS +=  \
@@ -222,7 +218,6 @@ src/ASF/xmega/drivers/cpu/ccp.d \
 src/ASF/xmega/drivers/nvm/nvm.d \
 src/ASF/xmega/drivers/nvm/nvm_asm.d \
 src/ASF/xmega/drivers/usart/usart.d \
-src/at_parser.d \
 src/main.d
 
 OUTPUT_FILE_PATH +=USART_SIM900.elf
@@ -239,8 +234,6 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
-
-
 
 
 

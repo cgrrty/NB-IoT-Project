@@ -15,6 +15,9 @@ Without the volatile keyword, the compiler may optimize out accesses to a variab
 as the C language itself has no concept of different execution threads. Take the following example:
 */
 
+//DEFINE OF THE SYSTEM CLOCK SPEED
+//#define F_CPU 2000000UL
+
 //DFEINITIOINS OF CONTROLLER STATES. THESE WILL MATCH WITH VISIO FLOW CHART.
 typedef enum {
 	READ_EXT_DATA,
@@ -119,8 +122,13 @@ uint32_t accu_data = 0; //allocating internal accumulation storage.
 //////////////////////////////////////////////////////////////////////////
 
 //RADIO RESPONSE ARRAY AND SIZE DEFINITIONS
-#define RESPONSE_SIZE 100
+#define RESPONSE_SIZE 128
 volatile char response[RESPONSE_SIZE];
+volatile uint8_t response_counter = 0;
+volatile uint32_t response_timeout = 0;
+volatile uint32_t response_timeout_counter = 0;
+
+volatile uint8_t *tx_char = 0;
 //////////////////////////////////////////////////////////////////////////
 
 //DEFINITIONS OF STATUS AND MODES PARAMETERS
@@ -159,43 +167,10 @@ int transfer_data_length_package = 0; //ACTUAL PACKAGE SIZE TO BE TRANSMITTED. C
 //Functions related to the radio communication
 void usart_tx_at(USART_t *usart, uint8_t *cmd) {
 	
-	//send the command
 	while(*cmd) {
-		usart_putchar(usart, *cmd++);
+		usart_putchar(usart, *cmd++); //send the command
 	}
 	
-}
-
-uint8_t usart_rx_at(USART_t *usart, uint16_t timeout, uint8_t *timeout_status)
-{
-	uint32_t timeout2 = timeout;
-	timeout2 = timeout2*100;
-	
-	while ((usart_rx_is_complete(usart) == false) & (timeout2 > 0)) {
-		timeout2--;
-	}
-	
-	if (timeout2 == 0)
-	{
-		*timeout_status = 1;
-	}
-	
-	return ((uint8_t)(usart)->DATA);
-}
-
-
-uint8_t at_response(USART_t *usart, uint16_t timeout, char *array_pointer) {
-	
-	uint8_t i = 0;
-	uint8_t status = 0;
-	
-	while ( (status == 0) & (i < RESPONSE_SIZE) )
-	{
-		*(array_pointer+i) = usart_rx_at(usart, timeout, &status);
-		i++;
-	}
-	
-	return status;
 }
 
 void usart_tx_char(USART_t *usart, char *cmd) {
@@ -215,8 +190,25 @@ void led_blink(uint16_t on_time) {
 	PORTQ.OUT |= (1<<3);
 	delay_ms(on_time);
 }
-#endif // DEBUG
 
+void led_blink2(uint32_t on_time) {
+	volatile uint16_t i = 0;
+	
+	PORTQ.OUT &= ~(1<<3);
+	while (i < on_time)
+	{
+		delay_ms(1);
+		i++;
+	}
+	i = 0;
+	PORTQ.OUT |= (1<<3);
+	while (i < on_time)
+	{
+		delay_ms(1);
+		i++;
+	}
+}
+#endif // DEBUG
 
 void rtc_init_period(uint16_t period)
 {
@@ -230,8 +222,6 @@ void rtc_init_period(uint16_t period)
 	RTC.INTCTRL |= INT_LEVEL_LOW;
 	RTC.CTRL = RTC_PRESCALER_DIV1024_gc;
 }
-
-
 
 static void adc_init(void)
 {
@@ -346,7 +336,6 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 	 return avg;
 }
 
-
 uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_ascii, int base) {
 	uint8_t status = 0;
 	uint8_t i = 0;
@@ -411,7 +400,6 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 	//////////////////////////////////////////////////////////////////////////
 	return status;
 }
-
 
 uint8_t reset_tx_data(uint16_t *array, uint16_t *reset_array, uint8_t len_array) {
 	uint8_t status = 0;
@@ -479,9 +467,9 @@ uint8_t radio_power_on(void) {
 	//wait for status
 	while ( (!(STATUS_PORT.IN & (1<<STATUS_PIN))) & (cnt_pwron < AT_REPEAT_LONG) )
 	{
-		delay_ms(AT_REPEAT_DELAY);
+		delay_ms(300);
 		cnt_pwron++;
-	}
+	} 
 	
 	if (cnt_pwron == AT_REPEAT_LONG)
 	{
@@ -504,7 +492,7 @@ uint8_t radio_power_down(void) {
 	
 	while ( (STATUS_PORT.IN & (1<<STATUS_PIN)) & (cnt_pwrdwn < AT_REPEAT_LONG) )
 	{
-		delay_ms(AT_REPEAT_DELAY);
+		delay_ms(300);
 		cnt_pwrdwn++;
 	}
 	
@@ -512,12 +500,6 @@ uint8_t radio_power_down(void) {
 	if (cnt_pwrdwn == AT_REPEAT_LONG)
 	{
 		status = 1;
-		/*
-		reset_char_array(&response, RESPONSE_SIZE);
-		usart_tx_at(USART_SERIAL_SIM900, AT_QPOWD); //return OK
-		at_response(USART_SERIAL_SIM900, RESPONSE_TIME_300M, &response);
-		usart_tx_at(USART_SERIAL_EXAMPLE, response);
-		*/
 	}
 	
 	return status;
@@ -559,40 +541,53 @@ void at_get_radio_network_time(){
 	}
 	
 }
-uint8_t tx_at_response(uint8_t *cmd, char *compare, uint8_t response_time, uint8_t repeat) {
+
+uint8_t tx_at_response(const m95_at_t *opt) {
 	
 	uint8_t status = 0; //tx status, 0 = alles ok.
 	uint8_t tx_at_cnt = 0; //nr of AT command sent
 	char *ret; //response pointer
+	uint32_t i = 0;
 	
 	ret = 0;
-	while (tx_at_cnt < repeat) //9*300ms ~ 3s
+	while (tx_at_cnt < opt->retries) //Less than nr of retries to send the AT command
 	{
 		reset_char_array(&response, RESPONSE_SIZE); //reset response buffer
-		usart_tx_at(USART_SERIAL_SIM900, cmd); //send AT command to radio
-		at_response(USART_SERIAL_SIM900, response_time, &response); //read the response from the radio
-		ret = strstr(response, compare); //DO THE COMPARISON AND BREAK THE LOOP TO SAVE TIME => AVOID THE DELAY ROUTINE.
+		response_counter = 0; //RESET COUNTER
+		response_timeout = opt->resp_time;
+		response_timeout_counter = 0;
 		
-		if (ret != 0) //correct response received
-		{
-			status = 0;
-			break;
-		} else {
-			status = 1;
+		usart_tx_at(USART_SERIAL_SIM900, opt->cmd); //send AT command to radio
+		
+		usart_set_rx_interrupt_level(USART_SERIAL_SIM900, USART_INT_LVL_MED); //READY FOR RECEIVING BYTES
+		while (response_timeout_counter < response_timeout) {
+			response_timeout_counter++;
+			delay_us(1);
+			ret = strstr(response, opt->comp); //DO THE COMPARISON AND BREAK THE LOOP
+			if (ret != 0) //correct response received. IDEALLY IT SHOULD CHECK FOR WRONG RESPONSES TO AVOID TIMOUT TO BE RUN IF IT HAPPENS
+			{
+				status = 0;
+				goto END;
+				} else {
+				status = 1;
+			}
 		}
 		
-		delay_ms(AT_REPEAT_DELAY);
+		delay_ms(300);
 		tx_at_cnt++;
 	}
 	
+	END:
+	usart_set_rx_interrupt_level(USART_SERIAL_SIM900, USART_INT_LVL_OFF); //disable rx interrupts
+	
 	#ifdef DEBUG
 		usart_tx_at(USART_SERIAL_EXAMPLE, response); //DEBUG
+		//usart_tx_at(USART_SERIAL_EXAMPLE, RESPONSE_FOOTER); //DEBUG
 	#endif // DEBUG
 	
-
 	return status;
 }
-	
+
 uint8_t at_rf_connect(void) {
 	/*
 	status = 0 => all AT commands was executed sucesessfully
@@ -601,30 +596,20 @@ uint8_t at_rf_connect(void) {
 	
 	WILL MATCH FLOWCHART IN VISIO
 	*/
+	
 	uint8_t status = 0;
-		
-	if (tx_at_response(AT_QNSTATUS, AT_QNSTATUS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT_LONG)) {goto END;}
-		//if (tx_at_response(AT_QNSTATUS, LOCAL_IP, 1, AT_REPEAT) == 1) {goto END;} //DEBUG
-	if (tx_at_response(AT_QIFGCNT, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QICSGP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
+	uint8_t i = 0;
+	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+	while ( i < 14 )
+	{
+		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+		i++;
+	}
+	if (tx_at_response(&m95_connect[i])) {status = 32; goto END;} else {at_get_radio_network_time();} //get network's time
 	
-	if (tx_at_response(AT_QIMUX, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QIMODE, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QIDNSIP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QIREGAPP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QISTAT, AT_QISTAT_COMPARE_IP_START, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;} //CHECK IP STATUS
-	if (tx_at_response(AT_QIACT, AT_QIACT_COMPARE, RESPONSE_TIME_20S, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QILOCIP, LOCAL_IP, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;} //Need local IP
-	if (tx_at_response(AT_QISTAT, AT_QISTAT_COMPARE_CONNECT_OK || 
-								AT_QISTAT_COMPARE_IP_INITIAL ||
-								AT_QISTAT_COMPARE_IP_STATUS ||
-								AT_QISTAT_COMPARE_IP_CLOSE, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;} //CHECK IP STATUS
-	if (tx_at_response(AT_QIOPEN, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT)) {status = 1; goto END;}
-	if (tx_at_response(AT_QISRVC, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QISTAT, AT_QISTAT_COMPARE_CONNECT_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;} //CHECK IP STATUS
-	if (tx_at_response(AT_QLTS, AT_QLTS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT)) {status = 32; goto END;} else {at_get_radio_network_time();} //get network's time
+	END: 
 	
-	END: return status;
+	return status;
 }
 
 uint8_t at_rf_disconnect(void) {
@@ -635,9 +620,13 @@ uint8_t at_rf_disconnect(void) {
 	WILL MATCH FLOWCHART IN VISIO
 	*/
 	uint8_t status = 0;
-	
-	if (tx_at_response(AT_QICLOSE, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT)) {goto END;}
-	if (tx_at_response(AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT)) {goto END;}
+	uint8_t i = 0;
+	//while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
+	while (i < 2)
+	{
+		if (tx_at_response(&m95_disconnect[i])) {/*goto END;*/}
+		i++;
+	}
 	
 	END: return status;
 }
@@ -648,27 +637,35 @@ uint8_t tx(char *data, int len) {
 	status > 0 => one of the AT commands was not executed sucessfully.
 	*/
 	uint8_t status = 0;
-	int i = 0;
-	
-	if (tx_at_response(AT_QISEND, AT_QISEND_COMPARE, RESPONSE_TIME_300M, AT_REPEAT)) {status = 1; goto END;}
+	uint8_t i = 0;
+		
+	if (tx_at_response(&m95_tx[0])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[1])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
 	while (i < len)
 	{
 		//usart_putchar(USART_SERIAL_SIM900, *(data+i));
 		#ifdef DEBUG
-		usart_putchar(USART_SERIAL_EXAMPLE, *(data+i)); //DEBUG
+			usart_putchar(USART_SERIAL_EXAMPLE, *(data+i)); //DEBUG
 		#endif // DEBUG
-		
 		i++;
 	}
-	
-	if (tx_at_response(CTRL_Z, NULL, RESPONSE_TIME_300M, AT_REPEAT)) {status = 2; goto END;}
-	
+	if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
+			
 	END: return status;
+}
+
+
+ISR(USARTC0_RXC_vect)
+{
+	*(response + response_counter) = usart_getchar(USART_SERIAL_SIM900);
+	response_counter++;
+	response_timeout_counter = 0; //reset global timeout counter for each byte read. Could ideally be lower for 20 seconds timeout commands. FIX!!!!!
 }
 
 ISR(RTC_OVF_vect)
 {
-	cli(); //disable interrupts. Other way of disabling and resetting?
+	sysclk_disable_module(SYSCLK_PORT_GEN, SYSCLK_RTC);
+	//cli(); //disable interrupts. Other way of disabling and resetting?
 	#ifdef DEBUG
 		led_blink(50); //DEBUG
 	#endif // DEBUG
@@ -682,7 +679,7 @@ ISR(RTC_OVF_vect)
 			case READ_EXT_DATA:
 				reset_char_array(&response, RESPONSE_SIZE); //reset response buffer
 				REQUEST_DATA_PORT.OUTSET |= (1<<REQUEST_DATA_PIN); //set signal high
-				at_response(USART_EXT_DATA, RESPONSE_TIME_300M, &response); //read the response from the radio
+				//at_response(USART_EXT_DATA, RESPONSE_TIME_300M, &response); //read the response from the radio
 				REQUEST_DATA_PORT.OUTSET &= ~(1<<REQUEST_DATA_PIN); //set signal low
 				#ifdef DEBUG
 					usart_tx_at(USART_SERIAL_EXAMPLE, response);
@@ -737,22 +734,24 @@ ISR(RTC_OVF_vect)
 				break;
 			
 			case RF_POWER_ON:
-				if (radio_power_on() == 1) //power on and check if it fails
-				{
-					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
-					controller_next_state = RF_POWER_OFF; //if failure go to power off
-					break;
-				}
+				radio_power_on(); //DEBUG
+// 				if (radio_power_on() == 1) //power on and check if it fails
+// 				{
+// 					//tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
+// 					//controller_next_state = RF_POWER_OFF; //if failure go to power off
+// 					//break;
+// 				}
 				controller_next_state = RF_CONNECT;
 				break;
 				
 			case RF_CONNECT:
-				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
-				{
-					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
-					controller_next_state = RF_DISCONNECT; //if failure go to disconnect
-					break;
-				}
+				at_rf_connect(); //DEBUG
+// 				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
+// 				{
+// 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
+// 					controller_next_state = RF_DISCONNECT; //if failure go to disconnect
+// 					break;
+// 				}
 				controller_next_state = GENERATE_PACKAGE;
 				break;
 				
@@ -760,11 +759,11 @@ ISR(RTC_OVF_vect)
 				data_to_char(&tx_data, TX_DATA_SIZE, &tx_data_bytes, TRANSFER_DATA_BASE);
  				transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
 				#ifdef DEBUG //output package size
-					char package_lenght[5] = "";
-					char mystring[5] = "";
-					itoa(transfer_data_length_package, package_lenght, 10);
-					strcpy(mystring, package_lenght);
-					usart_tx_at(USART_SERIAL_EXAMPLE, mystring);
+// 					char package_lenght[5] = "";
+// 					char mystring[5] = "";
+// 					itoa(transfer_data_length_package, package_lenght, 10);
+// 					strcpy(mystring, package_lenght);
+// 					usart_tx_at(USART_SERIAL_EXAMPLE, mystring);
 				#endif // DEBUG
 				controller_next_state = TX_DATA;
 				break;
@@ -806,9 +805,9 @@ ISR(RTC_OVF_vect)
 
 	
 	RTC.CNT = 0; //RESET RTC COUNTER.
-	sei(); //enable interrupt, go to sleep
+	sysclk_enable_module(SYSCLK_PORT_GEN, SYSCLK_RTC);
+	//sei(); //enable interrupt, go to sleep
 }
-
 
 /*! \brief Main function.
  */
@@ -847,6 +846,7 @@ int main(void)
 	#endif // DEBUG
 	
 	usart_init_rs232(USART_SERIAL_SIM900, &USART_SERIAL_OPTIONS); //Radio UART
+	//usart_set_rx_interrupt_level(USART_SERIAL_SIM900, USART_INT_LVL_MED);
 	sysclk_enable_module(SYSCLK_PORT_C, 4);
 	
 	usart_init_rs232(USART_EXT_DATA, &USART_SERIAL_OPTIONS); //External data UART
@@ -869,7 +869,6 @@ int main(void)
 		
 	//WDT setup for interrupt
 	//////////////////////////////////////////////////////////////////////////
-	
 		
 	//reset all tx data and date
 	reset_all_data();
@@ -880,6 +879,8 @@ int main(void)
 	rtc_init_period(WAKEUP_RATE); //using RTC as sampler timer.
 	
 	sei(); //enable interrupts
+	
+	
 	
 	//go to sleep and let interrupts do the work...zzz....zzzz
 	while (1)

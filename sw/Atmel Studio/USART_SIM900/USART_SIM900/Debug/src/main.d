@@ -67,7 +67,7 @@ src/main.d src/main.o: ../src/main.c ../src/main.h ../src/asf.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h \
  ../src/config/conf_usart_example.h ../src/config/conf_board.h \
- ../src/sim900_at_commands.h ../src/user_network_params.h \
+ ../src/quectel_m95.h ../src/user_network_params.h \
  ../src/loadcell_logger_setup.h
 
 ../src/main.h:
@@ -236,7 +236,7 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\
 
 ../src/config/conf_board.h:
 
-../src/sim900_at_commands.h:
+../src/quectel_m95.h:
 
 ../src/user_network_params.h:
 

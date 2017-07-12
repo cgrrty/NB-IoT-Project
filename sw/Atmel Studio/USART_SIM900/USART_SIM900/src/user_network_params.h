@@ -20,6 +20,6 @@
 #define SERVER_ADDR "10.18.0.39" //MQTT server (broker) on remote desktop
 #define SERVER_PORT "1883" //MQTT server port on remote desktop
 
-#define  LOCAL_IP "10"
+#define  LOCAL_IP "10.10.0.13\r\n" //CHANGE WITH \r\n IN THE COMMAND SECTION.
 
 #endif /* USER_NETWORK_PARAMS_H_ */
