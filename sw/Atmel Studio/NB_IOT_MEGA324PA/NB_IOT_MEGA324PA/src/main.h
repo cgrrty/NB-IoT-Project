@@ -14,7 +14,6 @@
 #include "avr/interrupt.h"
 #include "math.h"
 #include "avr/wdt.h"
-#include "delay.h"
 #include "avr/sleep.h"
 
 
@@ -43,6 +42,7 @@ void usart_tx_char(USART_t *usart, char *cmd);
 uint8_t at_response(USART_t *usart, uint16_t timeout, char *array_pointer);
 uint8_t usart_rx_at(USART_t *usart, uint16_t timeout, uint8_t *timeout_status);
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
+uint8_t radio_power_on(void);
 
 //COMMUNICATION PACKAGE SETUP
 //COULD BE UPC UA OR OTHER.

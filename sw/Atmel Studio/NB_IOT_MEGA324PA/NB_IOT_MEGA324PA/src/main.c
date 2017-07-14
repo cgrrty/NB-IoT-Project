@@ -33,7 +33,7 @@ as the C language itself has no concept of different execution threads. Take the
 
 //MOVE!!!!
 #define USART1    (*(USART_t *)0xC8) 
-#define USART_RADIO				&USART0 //
+#define USART_RADIO				 &USART1 //DEBUGGGGGGGGG &USART0 //
 #define USART_TERMINAL			&USART1 //
 #define  USART_EXT_DATA			&USART1
 
@@ -56,7 +56,7 @@ static usart_rs232_options_t USART_OPTIONS = {
 };
 
 //DFEINITIOINS OF CONTROLLER STATES. THESE WILL MATCH WITH VISIO FLOW CHART.
-typedef enum {
+typedef enum controller_states {
 	READ_EXT_DATA,
 	MEASURE,
 	CALC,
@@ -245,7 +245,7 @@ void radio_pins_init(void) {
 	
 	//PWRKEY and startup sequence.
 	DDRD |= (1<<PWRKEY_PIN); //reset pin
-	PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
+	//PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
 	
 	
 	//STATUS, NOT NEEDED AS NETLIGHT IS REQUIRED BEFORE SENDING COMMANDS.
@@ -255,6 +255,16 @@ void radio_pins_init(void) {
 	//NETLIGHT. NOT AVAILABLE ON DEVELOPMENT BOARD, HAVE TO USE SW CALL TO CHECK FOR CONNECTION STATUS.
 	//NETLIGHT_PORT.DIR &= ~(1<<NETLIGHT_PIN); //input
 	
+}
+
+void my_delay_10ms(uint8_t loops)
+{
+  /* Prevents the use of floating point libraries. Delaying in groups of
+     10ms increases accuracy by reducing the time overhead for each loop
+     interation of the while.                                            */
+
+	while (loops--)
+	  delay_ms(10);
 }
 
 
@@ -267,16 +277,15 @@ uint8_t radio_power_on(void) {
 	PWRKEY_PORT |= (1<<PWRKEY_PIN); //reset of radio
 	delay_ms(100); //boot time, 100ms recommended for m95
 	PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
-	delay_ms(800); //time before m95 is running. There exist a status bit that might be useful to monitor.
-	delay_ms(400);
+	delay_s(1);
 	PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
 	
 	//wait for status
-	while ( (!(STATUS_PORT & (1<<STATUS_PIN))) & (cnt_pwron < AT_REPEAT_LONG) )
+	while ( ((STATUS_PORT & (1<<STATUS_PIN)) == 0) & (cnt_pwron < AT_REPEAT_LONG) )
 	{
-		delay_ms(300);
+		delay_ms(200);
 		cnt_pwron++;
-	}
+	} 
 	
 	if (cnt_pwron == AT_REPEAT_LONG)
 	{
@@ -286,24 +295,25 @@ uint8_t radio_power_on(void) {
 	return status;
 }
 
-uint8_t radio_power_down(void) {
+uint8_t radio_power_off_at(void) {
 	uint8_t status = 0;
 	uint8_t cnt_pwrdwn = 0;
 	
-	//power down
-	PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
-	PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
-	delay_ms(800); //0,6s < pulldown < 1s
-	PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
-	delay_s(1);
-	
-	while ( (STATUS_PORT & (1<<STATUS_PIN)) & (cnt_pwrdwn < AT_REPEAT_LONG) )
+	while (((STATUS_PORT & (1<<STATUS_PIN)) == 0x20)  & (cnt_pwrdwn < AT_REPEAT_LONG) )
 	{
-		delay_ms(300);
-		usart_putchar(USART_TERMINAL, (0x30+cnt_pwrdwn));
+		usart_tx_at(USART_TERMINAL, AT_QPWD_1); //DEBUG
+		usart_tx_at(USART_RADIO, AT_QPWD_1); //normal power off
+		PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
+		delay_s(4);
+		if (((STATUS_PORT & (1<<STATUS_PIN)) == 0x20)) //if still on
+		{
+			usart_tx_at(USART_TERMINAL, AT_QPWD_0); //DEBUG
+			usart_tx_at(USART_RADIO, AT_QPWD_0);
+			PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
+			delay_s(6);
+		}
 		cnt_pwrdwn++;
 	}
-	
 	
 	if (cnt_pwrdwn == AT_REPEAT_LONG)
 	{
@@ -414,7 +424,7 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 		usart_rx_complete_interrupt_enable(USART_RADIO);
 		while (response_timeout_counter < response_timeout) {
 			response_timeout_counter++;
-			delay_us(1);
+			my_delay_10ms(1);
 			ret = strstr(response, opt->comp); //DO THE COMPARISON AND BREAK THE LOOP
 			if (ret != 0) //correct response received. IDEALLY IT SHOULD CHECK FOR WRONG RESPONSES TO AVOID TIMOUT TO BE RUN IF IT HAPPENS
 			{
@@ -425,7 +435,7 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 			}
 		}
 		
-		delay_ms(300);
+		my_delay_10ms(30);
 		tx_at_cnt++;
 	}
 	
@@ -561,9 +571,9 @@ uint8_t tx(char *data, int len) {
 	if (tx_at_response(&m95_tx[1])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
 	while (i < len)
 	{
-		//usart_putchar(USART_RADIO, *(data+i));
+		usart_putchar(USART_RADIO, *(data+i));
 		#ifdef DEBUG
-			usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
+			//usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
 		#endif // DEBUG
 		i++;
 	}
@@ -580,23 +590,19 @@ ISR(USART0_RX_vect)
 	response_timeout_counter = 0; //reset global timeout counter for each byte read. Could ideally be lower for 20 seconds timeout commands. FIX!!!!!
 }
 
-//ISR(WDT_vect)
-void main_function()
+//main_function()
+ISR(WDT_vect)
 {
-	//cli();
-	//wdt_disable();
-	
-	#ifdef DEBUG
-		led_blink(50); //DEBUG
-	#endif // DEBUG
-	
-	//MEGA SPECIFIC LONG TIME RTC FUNCTION
-	wdt_counter++; //increment counter 
-	if (wdt_counter < SAMPLING_TIME)
+	wdt_disable();
+	wdt_counter++; //watchdog set at 1 second timeout
+	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+	usart_putchar(USART_TERMINAL, (0x30+wdt_counter)); //DEBUG
+	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+
+	if (wdt_counter < WAKEUP_RATE)
 	{
-		goto END; //BREAK ISR IF TRANSMIT 
-	} else {wdt_counter = 0;}
-	//////////////////////////////////////////////////////////////////////////
+		goto END;
+	} else {wdt_counter = 0;} //reset counter if limit is reached.
 	
 	RTC_ISR_ACTIVE = 1;
 	while (RTC_ISR_ACTIVE == 1)
@@ -605,37 +611,24 @@ void main_function()
 		switch(controller_state) {
 			
 			case READ_EXT_DATA:
-// 				reset_char_array(&response, RESPONSE_SIZE); //reset response buffer
-// 				REQUEST_DATA_PORT |= (1<<REQUEST_DATA_PIN); //set signal high
-// 				//at_response(USART_EXT_DATA, RESPONSE_TIME_300M, &response); //read the response from the radio
-// 				REQUEST_DATA_PORT &= ~(1<<REQUEST_DATA_PIN); //set signal low
-// 				#ifdef DEBUG
-// 				usart_tx_at(USART_TERMINAL, response);
-// 				#endif // _DEBUG
-// 				uint16_t ext_data = (response[0] << 8) | response[1]; //convert response to bytes and store in data registers
-// 				//This position needs to be specified for each use case dependent on available registers.
-// 				tx_data[POSITION_DIO] = ext_data;
-// 				//////////////////////////////////////////////////////////////////////////
-				
 				controller_next_state = MEASURE;
-				//controller_next_state = RF_CONNECT; //DEBUG
 				break;
 			
 			case MEASURE:
 				//GENERAL MEASUREMENTS
-// 				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
+ 				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
 // 				tx_data[POSITION_ANA1] = adc_result_average(ADC_MUX_ADC1, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA2] = adc_result_average(ADC_MUX_ADC2, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA3] = adc_result_average(ADC_MUX_ADC3, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA4] = adc_result_average(ADC_MUX_ADC4, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA5] = adc_result_average(ADC_MUX_ADC5, ADC_NUM_AVG); //
 // 				//tx_data[POSITION_TEMP] = adc_result_average(ADC_MUX_TEMPSENSE, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
-// 				tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
-// 			
+ 				tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
+				
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL////////////////////////////////////////////////////////////////////////
 				accu_data += tx_data[POSITION_CURRENT]; //controller_measure(9, &tx_data); //measure with averaging, and accumulate.
 				loadcell_min_max_tran(tx_data[POSITION_CURRENT], &tx_data); //check if new value should be stored in min, max and tran.
- 				tx_data[POSITION_PREV] = tx_data[POSITION_CURRENT]; //store adc value for next measurement.
+				tx_data[POSITION_PREV] = tx_data[POSITION_CURRENT]; //store adc value for next measurement.
 				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				
 				transmit_counter++;		
@@ -647,13 +640,11 @@ void main_function()
 					controller_next_state = CALC; //limit reached, go to next
 					} else {
 					controller_next_state = READ_EXT_DATA; //Start from top again
-					//RTC_ISR_ACTIVE = 0; //Break loop and go to sleep again
+					RTC_ISR_ACTIVE = 0; //Break loop and go to sleep again
 				}
 				break;
 			
 			case CALC:
-				//led_blink(3000); //DEBUG
-				
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL////////////////////////////////////////////////////////////////////////
 				tx_data[POSITION_AVG] = controller_calc_avg(accu_data, tx_data[POSITION_TIME]); //calc and store average.
 				accu_data = 0; //reset parameters
@@ -667,41 +658,43 @@ void main_function()
 				break;
 			
 			case RF_POWER_ON:
-			radio_power_on();
-// 				if (radio_power_on() == 1) //power on and check if it fails
-// 				{
-// 	// 				tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
-// 	// 				controller_next_state = RF_POWER_OFF; //if failure go to power off
-// 	// 				break;
-// 				}
-			controller_next_state = RF_CONNECT;
-			break;
+				//radio_power_on();
+				if (radio_power_on() == 1) //power on and check if it fails
+				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
+					controller_next_state = RF_POWER_OFF; //if failure go to power off
+					break;
+				}
+				controller_next_state = RF_CONNECT;
+				break;
 			
-			case RF_CONNECT:
-			if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
-			{
-// 				tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
-// 				controller_next_state = RF_DISCONNECT; //if failure go to disconnect
-// 				break;
-			}
-			controller_next_state = GENERATE_PACKAGE;
-			break;
+			case RF_CONNECT: //NEED MORE POWER!!!!!!
+				//at_rf_connect();
+				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
+				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
+					controller_next_state = RF_DISCONNECT; //if failure go to disconnect
+					break;
+				}
+				controller_next_state = GENERATE_PACKAGE;
+				break;
 			
 			case GENERATE_PACKAGE:
 				data_to_char(&tx_data, TX_DATA_SIZE, &tx_data_bytes, TRANSFER_DATA_BASE);
-				transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
+ 				transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
 				#ifdef DEBUG //output package size
-	// 				char package_lenght[5] = "";
-	// 				char mystring[5] = "";
-	// 				itoa(transfer_data_length_package, package_lenght, 10);
-	// 				strcpy(mystring, package_lenght);
-	// 				usart_tx_at(USART_TERMINAL, mystring);
+// 					char package_lenght[5] = "";
+// 					char mystring[5] = "";
+// 					itoa(transfer_data_length_package, package_lenght, 10);
+// 					strcpy(mystring, package_lenght);
+// 					usart_tx_at(USART_TERMINAL, mystring);
 				#endif // DEBUG
 				controller_next_state = TX_DATA;
 				break;
 			
 			case TX_DATA:
-				//tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+				tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+				
 				controller_next_state = RX_DATA;
 				break;
 			
@@ -715,7 +708,7 @@ void main_function()
 				break;
 			
 			case RF_POWER_OFF:
-				radio_power_down(); //radio power down
+				radio_power_off_at(); //radio power down
 				controller_next_state = RESET_REGISTERS;
 				break;
 			
@@ -735,21 +728,19 @@ void main_function()
 		
 	}
 
-	
-	//WDTCSR |= (1<<WDIE);
-	
 	END:
-	cli();
-//	sei();
-	//wdt_enable(1);
+	
+	wdt_reset();
+	//wdt_enable();
+	rtc_init_period(1);
+	return;
+	
 }
 
 /*! \brief Main function.
  */
 int main(void)
 {
-	
-	
 	//disables interrupts
 	cli();
 	
@@ -772,7 +763,7 @@ int main(void)
 	//CLK.CTRL = 0x01; //2M
 	
 	//ADC setup
-	
+	adc_initialization();
 	
 			
 	
@@ -797,56 +788,41 @@ int main(void)
 	*/
 	//////////////////////////////////////////////////////////////////////////
 	//unsigned char data = 0x40;
-// 	usart_init_rs232(USART_RADIO, &USART_OPTIONS); //Radio UART
-// 	sysclk_enable_module(POWER_RED_REG0, PRUSART0_bm);
-// 	
-// 	usart_init_rs232(USART_TERMINAL, &USART_OPTIONS); //Radio UART
-// 	sysclk_enable_module(POWER_RED_REG0, PRUSART1_bm);
+	usart_init_rs232(USART_RADIO, &USART_OPTIONS); //Radio UART
+	sysclk_enable_module(POWER_RED_REG0, PRUSART0_bm);
+	
+	usart_init_rs232(USART_TERMINAL, &USART_OPTIONS); //Radio UART
+	sysclk_enable_module(POWER_RED_REG0, PRUSART1_bm);
 // 	
 // 	//initialize radio pins
-// 	delay_s(1); //wait for voltages to settle
-// 	radio_pins_init();
+ 	delay_s(1); //wait for voltages to settle
+ 	radio_pins_init();
+	delay_s(1);
 // 	
 // 	
 	//Shut down radio, might be on
-	if ( (STATUS_PORT & (1<<STATUS_PIN)) == 1 )
-	{
-		radio_power_down();
-	}
-	
-	
-	
-//  	while (1)
-//  	{
-//  		usart_putchar(USART_TERMINAL, 0x40);
-//  		delay_s(1);
-//  	}
-	////////////////////////////////////////////////////////
+	//if( (STATUS_PORT & (1<<STATUS_PIN)) == 0x80 ) //have a counter and reset if fail
+	radio_power_off_at();
 	
 	//reset all tx data and date
-	//reset_all_data(); //PROBLEM FIX!!!!!!!!!!!!!!!!!!!!!!
+	reset_all_data(); //PROBLEM FIX!!!!!!!!!!!!!!!!!!!!!!
 	
 	//RTC setup.
 	//PR.PRGEN &= ~(1<<2); //enable the RTC clock
 	//sleepmgr_init();
 	//rtc_init_period(WAKEUP_RATE); //using RTC as sampler timer.
-	//rtc_init_period(1); //using RTC as sampler timer.
+	rtc_init_period(1); //using RTC as sampler timer.
 	
-	//sei(); //enable interrupts
+	sei(); //enable interrupts
 	
-	
-	
-	#ifdef DEBUG
-		//DDRB |= (1<<5);
-	#endif // DEBUG
-	
-	
+		
 	//go to sleep and let interrupts do the work...zzz....zzzz
 	while (1)
 	{
 		/*sleepmgr_enter_sleep();*/
-		//sleep_enable();
-		main_function();
+		sleep_enable();
+// 		delay_s(1);
+// 		main_function();
 		
 	}
 		

@@ -47,6 +47,8 @@ typedef struct m95_at {
 //General AT commands
 #define AT_AT "AT\r"
 #define AT_CGATT "AT+CGATT=<1>"
+#define  AT_QPWD_1 "AT+QPOWD=1\r" //power off normal mode
+#define  AT_QPWD_0 "AT+QPOWD=0\r" //power off emergency
 
 //AT SMS commands
 #define AT_CMGF "AT+CMGF=1\r"
@@ -84,9 +86,9 @@ typedef struct m95_at {
 //#define AT_REPEAT_DELAY 200 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
 
 //M95 response times
-#define RESPONSE_TIME_30M (uint32_t)DELAY_1MS_BASE*30 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
-#define RESPONSE_TIME_300M (uint32_t)DELAY_1MS_BASE*300 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
-#define RESPONSE_TIME_20S (uint32_t)DELAY_1MS_BASE*20000 //20*1000 //20sec 
+#define RESPONSE_TIME_30M 3 // (uint32_t)DELAY_1MS_BASE*30 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
+#define RESPONSE_TIME_300M 30 //(uint32_t)DELAY_1MS_BASE*300 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
+#define RESPONSE_TIME_20S 200 // (uint32_t)DELAY_1MS_BASE*20000 //20*1000 //20sec 
 
 //AT TCP/IP commands M95
 #define AT_QICLOSE "AT+QICLOSE\r"  //Same as AT_CIPSHUT, check notes in app note
