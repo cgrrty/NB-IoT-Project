@@ -15,8 +15,8 @@
 #include "string.h"
 
 //sampling and averaging times
-#define SAMPLING_TIME 5
-#define AVERAGING_TIME 300
+#define SAMPLING_TIME 1
+#define AVERAGING_TIME 600
 
 //Data positions
 #define POSITION_CURRENT 0

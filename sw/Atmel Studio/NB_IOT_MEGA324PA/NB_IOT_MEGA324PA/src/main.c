@@ -33,7 +33,7 @@ as the C language itself has no concept of different execution threads. Take the
 
 //MOVE!!!!
 #define USART1    (*(USART_t *)0xC8) 
-#define USART_RADIO				 &USART1 //DEBUGGGGGGGGG &USART0 //
+#define USART_RADIO				 &USART0 //
 #define USART_TERMINAL			&USART1 //
 #define  USART_EXT_DATA			&USART1
 
@@ -108,7 +108,7 @@ uint16_t transmit_counter = 0;
 #define POSITION_MINUTE 14
 #define POSITION_SECOND 15
 #define POSITION_STATUS 16
-#define TX_DATA_SIZE 17 //sum of the above
+#define TX_DATA_SIZE 1 //17 //sum of the above
 
 //DEFINE DATA RESET VALUES
 #define RESET_VALUE_ANA0 0
@@ -171,6 +171,11 @@ uint8_t RTC_ISR_ACTIVE = 0;
 #define STATUS_PIN 5 //7
 //#define NETLIGHT_PORT PORTR
 //#define NETLIGHT_PIN 0
+//////////////////////////////////////////////////////////////////////////
+
+//DEFINITIONS OF PINS CONNECTED TO THE LOADCELL
+#define LOADCELL_PWR_PORT PORTD
+#define LOADCELL_PWR_PIN 6
 //////////////////////////////////////////////////////////////////////////
 
 //ADC definitions
@@ -237,8 +242,14 @@ void rtc_init_period(uint16_t period)
 	MCUSR = 0x00; //RESET STATUS REGISTER
 	WDTCSR = (1<<WDCE) | (1<<WDE);
 	WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); //1 second wakeup
+	//WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0); //8 second wakeup
 	
 	
+}
+
+void loadcell_pins_init(void) {
+	DDRD |= (1<<LOADCELL_PWR_PIN); //define power pin for external sensor. This must be a real switch in final application!!!!
+	LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN); //set to ground, i.e. power off.
 }
 
 void radio_pins_init(void) {
@@ -267,6 +278,14 @@ void my_delay_10ms(uint8_t loops)
 	  delay_ms(10);
 }
 
+uint8_t loadcell_power_on(void) {
+	LOADCELL_PWR_PORT |= (1<<LOADCELL_PWR_PIN);
+	delay_ms(10); //voltage to settle
+}
+
+uint8_t loadcell_power_off() {
+	LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN);
+}
 
 uint8_t radio_power_on(void) {
 	uint8_t status = 0;
@@ -354,10 +373,10 @@ uint16_t adc_result_average (uint8_t adc_ch, uint8_t num_avg) {
 		res_median[i] = adc_read_10bit(adc_ch, ADC_VREF_AVCC);
 		res = res + res_median[i];
 		
-		if (res_median[i] > 300)
-		{
-			led_blink(1000);
-		}
+// 		if (res_median[i] > 300)
+// 		{
+// 			led_blink(1000);
+// 		}
 		
 		i++;
 		
@@ -459,7 +478,8 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 	char temp[5] = ""; //MAX 4 VALUES + NULL TERMINATION
 	
 	//CONVERT ALL 2 BYTES NUMBERS
-	while (i <= POSITION_TIME)
+	//while (i <= POSITION_TIME)
+	while (i <= (POSITION_TIME & (array_data_len-1)))
 	{
 		j=1;
 		while (TX_DATA_DIGITS-j > 0)
@@ -481,7 +501,7 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 		}
 		
 		strcat(array_ascii, temp); //APPEND NUMBER
-		strcat(array_ascii, ","); //DEBUG
+		//strcat(array_ascii, ","); //DEBUG
 		reset_char_array(&temp, sizeof(temp));
 		i++;
 	}
@@ -489,7 +509,8 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 	
 	//CONVERT ALL 1 BYTES NUMBERS
 	i = POSITION_YEAR;
-	while (i <= POSITION_STATUS)
+	//while (i <= POSITION_STATUS)
+	while (i <= (POSITION_STATUS & (array_data_len-1)))
 	{
 		j=1;
 		while (TX_DATE_DIGITS-j > 0)
@@ -514,6 +535,7 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 		i++;
 	}
 	//////////////////////////////////////////////////////////////////////////
+	
 	return status;
 }
 
@@ -530,7 +552,7 @@ uint8_t at_rf_connect(void) {
 	uint8_t i = 0;
 	while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
 	{
-		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+		if (tx_at_response(&m95_connect[i])) {goto END;}
 		i++;
 	}
 	if (tx_at_response(&m95_connect[i])) {status = 32; goto END;} else {at_get_radio_network_time();} //get network's time
@@ -551,7 +573,7 @@ uint8_t at_rf_disconnect(void) {
 	uint8_t i = 0;
 	while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
 	{
-		if (tx_at_response(&m95_disconnect[i])) {/*goto END;*/}
+		if (tx_at_response(&m95_disconnect[i])) {goto END;}
 		i++;
 	}
 	
@@ -567,18 +589,26 @@ uint8_t tx(char *data, int len) {
 	uint8_t status = 0;
 	uint8_t i = 0;
 		
-	if (tx_at_response(&m95_tx[0])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_tx[1])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[0])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[1])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
 	while (i < len)
 	{
 		usart_putchar(USART_RADIO, *(data+i));
 		#ifdef DEBUG
-			//usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
+			usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
 		#endif // DEBUG
 		i++;
 	}
-	usart_tx_at(USART_RADIO, CTRL_Z);
-	//if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	
+	//WHY???????
+ 	i=24;
+	while (i < 27)
+	{
+		usart_putchar(USART_RADIO, i);
+		i++;
+	}
+// 	usart_tx_at(USART_RADIO, CTRL_Z);
+// 	//if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
 			
 	END: return status;
 }
@@ -588,6 +618,20 @@ ISR(USART0_RX_vect)
 	*(response + response_counter) = usart_getchar(USART_RADIO);
 	response_counter++;
 	response_timeout_counter = 0; //reset global timeout counter for each byte read. Could ideally be lower for 20 seconds timeout commands. FIX!!!!!
+}
+
+//ISR(WDT_vect)
+jalla()
+{
+	//sleep_disable();
+	wdt_disable();
+	wdt_counter++; //watchdog set at 1 second timeout
+	delay_s(2);
+	wdt_reset();
+	//rtc_init_period(2); //using RTC as sampler timer.
+	//wdt_enable(9);
+	rtc_init_period(1);
+	//sleep_enable();
 }
 
 //main_function()
@@ -615,8 +659,13 @@ ISR(WDT_vect)
 				break;
 			
 			case MEASURE:
+				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
+				loadcell_power_on();
+				//////////////////////////////////////////////////////////////////////////
+				
 				//GENERAL MEASUREMENTS
  				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
+//				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_1V1, ADC_NUM_AVG); //PIN CHANGE HAVE NO EFFECT ON ADCB
 // 				tx_data[POSITION_ANA1] = adc_result_average(ADC_MUX_ADC1, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA2] = adc_result_average(ADC_MUX_ADC2, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA3] = adc_result_average(ADC_MUX_ADC3, ADC_NUM_AVG); //
@@ -624,6 +673,10 @@ ISR(WDT_vect)
 // 				tx_data[POSITION_ANA5] = adc_result_average(ADC_MUX_ADC5, ADC_NUM_AVG); //
 // 				//tx_data[POSITION_TEMP] = adc_result_average(ADC_MUX_TEMPSENSE, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
  				tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
+				 
+				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
+				loadcell_power_off();
+				//////////////////////////////////////////////////////////////////////////
 				
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL////////////////////////////////////////////////////////////////////////
 				accu_data += tx_data[POSITION_CURRENT]; //controller_measure(9, &tx_data); //measure with averaging, and accumulate.
@@ -673,7 +726,7 @@ ISR(WDT_vect)
 				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
 				{
 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
-					controller_next_state = RF_DISCONNECT; //if failure go to disconnect
+					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
 					break;
 				}
 				controller_next_state = GENERATE_PACKAGE;
@@ -683,18 +736,17 @@ ISR(WDT_vect)
 				data_to_char(&tx_data, TX_DATA_SIZE, &tx_data_bytes, TRANSFER_DATA_BASE);
  				transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
 				#ifdef DEBUG //output package size
-// 					char package_lenght[5] = "";
-// 					char mystring[5] = "";
-// 					itoa(transfer_data_length_package, package_lenght, 10);
-// 					strcpy(mystring, package_lenght);
-// 					usart_tx_at(USART_TERMINAL, mystring);
+					char package_lenght[5] = "";
+					char mystring[5] = "";
+					itoa(transfer_data_length_package, package_lenght, 10);
+					strcpy(mystring, package_lenght);
+					usart_tx_at(USART_TERMINAL, mystring);
 				#endif // DEBUG
 				controller_next_state = TX_DATA;
 				break;
 			
 			case TX_DATA:
 				tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
-				
 				controller_next_state = RX_DATA;
 				break;
 			
@@ -703,7 +755,13 @@ ISR(WDT_vect)
 				break;
 			
 			case RF_DISCONNECT:
-				at_rf_disconnect(); //Disconnect
+				//at_rf_disconnect(); //Disconnect
+				if (at_rf_disconnect() != 0) //Status will not be transmitted, but could probably be stored for later.
+				{
+					//tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_DISNNECT); //set failure status
+					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
+					break;
+				}
 				controller_next_state = RF_POWER_OFF;
 				break;
 			
@@ -798,6 +856,9 @@ int main(void)
  	delay_s(1); //wait for voltages to settle
  	radio_pins_init();
 	delay_s(1);
+	
+	//initialise loadcell pins
+	loadcell_pins_init();
 // 	
 // 	
 	//Shut down radio, might be on
@@ -811,21 +872,46 @@ int main(void)
 	//PR.PRGEN &= ~(1<<2); //enable the RTC clock
 	//sleepmgr_init();
 	//rtc_init_period(WAKEUP_RATE); //using RTC as sampler timer.
-	rtc_init_period(1); //using RTC as sampler timer.
 	
+	//wdt_reset();
+	rtc_init_period(2); //using RTC as sampler timer.
+	
+	//wdt_enable(9);
+	
+	
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	//sleep_enable();
+	//set_sleep_mode(SLEEP_MODE_PWR_SAVE);
+	//SMCR |= (1<<2);
+	
+// 	cli();
+// 	
+// 	sleep_enable();
+// 	sleep_bod_disable();
+// 	sei();
+// 	sleep_cpu();
+// 	sleep_disable();
+	
+// 	
+	
+		
 	sei(); //enable interrupts
-	
 		
 	//go to sleep and let interrupts do the work...zzz....zzzz
 	while (1)
 	{
+//		sleep_mode();
+ 		sleep_enable();
+ 		sleep_bod_disable();
+		 //sei();
+ 		sleep_cpu();
+ 		sleep_disable(); 	
+		//sleep_cpu();
 		/*sleepmgr_enter_sleep();*/
-		sleep_enable();
+		//sleep_enable();
 // 		delay_s(1);
 // 		main_function();
 		
 	}
 		
 }
-
-
