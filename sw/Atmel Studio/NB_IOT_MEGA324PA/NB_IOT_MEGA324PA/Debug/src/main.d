@@ -38,12 +38,12 @@ src/main.d src/main.o: ../src/main.c \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sleep.h \
  ../src/ASF/mega/drivers/usart_mega.h ../src/quectel_m95.h \
- ../src/user_network_params.h ../src/MQTT_functions.h ../src/MQTTPacket.h \
- ../src/MQTTConnect.h ../src/MQTTPublish.h ../src/MQTTSubscribe.h \
- ../src/MQTTUnsubscribe.h ../src/MQTTFormat.h ../src/StackTrace.h \
+ ../src/user_network_params.h ../src/loadcell_logger.h \
+ ../src/MQTT_functions.h ../src/MQTTPacket.h ../src/MQTTConnect.h \
+ ../src/MQTTPublish.h ../src/MQTTSubscribe.h ../src/MQTTUnsubscribe.h \
+ ../src/MQTTFormat.h ../src/StackTrace.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h \
- c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h \
- ../src/loadcell_logger.h
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\io.h:
 
@@ -137,6 +137,8 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 
 ../src/user_network_params.h:
 
+../src/loadcell_logger.h:
+
 ../src/MQTT_functions.h:
 
 ../src/MQTTPacket.h:
@@ -156,5 +158,3 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\stdio.h:
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdarg.h:
-
-../src/loadcell_logger.h:

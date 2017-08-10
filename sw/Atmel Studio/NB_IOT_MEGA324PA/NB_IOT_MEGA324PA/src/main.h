@@ -44,6 +44,10 @@ uint8_t usart_rx_at(USART_t *usart, uint16_t timeout, uint8_t *timeout_status);
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
 uint8_t radio_power_on(void);
 
+//EXTERNAL SENSOR SETUP
+#include "loadcell_logger.h"
+
+
 //COMMUNICATION PACKAGE SETUP
 //COULD BE UPC UA OR OTHER.
 #include "MQTT_functions.h"
@@ -51,8 +55,6 @@ uint8_t radio_power_on(void);
 
 
 
-//EXTERNAL SENSOR SETUP
-#include "loadcell_logger.h"
 
 
 #include "adc.h"

@@ -195,6 +195,7 @@ char tx_data_bytes[5]; //TX_DATA_SIZE amount of strings with length of 5 each.
 #define TRANSFER_DATA_SIZE_PACKAGE (TRANSFER_DATA_SIZE) //ASSUMING 2 TIMES THE DATA SIZE IS THE TOTAL PACKAGE OVERHEAD.
 char tx_data_package[TRANSFER_DATA_SIZE_PACKAGE] = ""; //Final data package generated from the tx_data_bytes array.
 int transfer_data_length_package = 0; //ACTUAL PACKAGE SIZE TO BE TRANSMITTED. CALCULATED IN PROGRAM. KEEP AS LOW AS POSSIBLE!!!!!!
+int transfer_data_package_counter = 0; //amount of packages transferred.
 ////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -475,74 +476,6 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 
 uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_ascii, int base) {
 	uint8_t status = 0;
-	uint8_t i = 0;
-	uint8_t j = 0;
-	char temp[5] = ""; //MAX 4 VALUES + NULL TERMINATION
-	
-	//CONVERT ALL 2 BYTES NUMBERS
-	//while (i <= POSITION_TIME)
-	while (i <= (POSITION_TIME & (array_data_len-1)))
-	{
-		j=1;
-		while (TX_DATA_DIGITS-j > 0)
-		{
-			if ((*(array_data+i) < pow(base,TX_DATA_DIGITS-j))) //CHECK IF NUMBER IS LESS THAN LIMITS
-			{
-				strcat(array_ascii, "0"); //ADD LEADING ZEROS
-			}
-			
-			j++;
-		}
-		
-		if (TX_ASCII)
-		{
-			itoa(*(array_data+i), temp, base); //CONVERT NUMBER TO ASCII
-			} else {
-			temp[0] = (*(array_data+i) >> 8) & 0xff; //JUST GRAB THE BYTES
-			temp[1] = *(array_data+i) & 0xff;
-		}
-		
-		strcat(array_ascii, temp); //APPEND NUMBER
-		//strcat(array_ascii, ","); //DEBUG
-		reset_char_array(&temp, sizeof(temp));
-		i++;
-	}
-	//////////////////////////////////////////////////////////////////////////
-	
-	//CONVERT ALL 1 BYTES NUMBERS
-	i = POSITION_YEAR;
-	//while (i <= POSITION_STATUS)
-	while (i <= (POSITION_STATUS & (array_data_len-1)))
-	{
-		j=1;
-		while (TX_DATE_DIGITS-j > 0)
-		{
-			if ((*(array_data+i) < pow(base,TX_DATE_DIGITS-j))) //CHECK IF NUMBER IS LESS THAN LIMITS
-			{
-				strcat(array_ascii, "0"); //ADD LEADING ZEROS
-			}
-			j++;
-		}
-		
-		if (TX_ASCII)
-		{
-			itoa(*(array_data+i), temp, base); //CONVERT NUMBER TO ASCII
-			} else {
-			temp[0] = *(array_data+i) & 0xff; //JUST GRAB THE BYTES
-		}
-		
-		strcat(array_ascii, temp); //APPEND NUMBER
-		strcat(array_ascii, ","); //DEBUG
-		reset_char_array(&temp, sizeof(temp));
-		i++;
-	}
-	//////////////////////////////////////////////////////////////////////////
-	
-	return status;
-}
-
-uint8_t data_to_char2(uint16_t *array_data, uint8_t array_data_len, char *array_ascii, int base) {
-	uint8_t status = 0;
 	uint8_t i = 0; //REMOVE VOLATILE
 	uint8_t j = 0; //REMOVE VOLATILE
 	char temp[5] = ""; //MAX 4 VALUES + NULL TERMINATION
@@ -583,41 +516,6 @@ uint8_t data_to_char2(uint16_t *array_data, uint8_t array_data_len, char *array_
 // 		i++;
 // 	}
 // 	
-	return status;
-}
-
-uint8_t data_to_char_single(uint16_t *array_data, char *array_ascii, int base) {
-	uint8_t status = 0;
-	uint8_t i = 0;
-	uint8_t j = 0;
-	char temp[5] = ""; //MAX 4 VALUES + NULL TERMINATION
-	
-	
-		j=1;
-		while (TX_DATA_DIGITS-j > 0)
-		{
-			if ((*(array_data+i) < pow(base,TX_DATA_DIGITS-j))) //CHECK IF NUMBER IS LESS THAN LIMITS
-			{
-				strcat(array_ascii[j-1], "0"); //ADD LEADING ZEROS
-			}
-			
-			j++;
-		}
-		
-		if (TX_ASCII)
-		{
-			itoa(*(array_data+i), temp, base); //CONVERT NUMBER TO ASCII
-			} else {
-			temp[0] = (*(array_data+i) >> 8) & 0xff; //JUST GRAB THE BYTES
-			temp[1] = *(array_data+i) & 0xff;
-		}
-		
-		strcat(array_ascii, temp); //APPEND NUMBER
-		//strcat(array_ascii, ","); //DEBUG
-		reset_char_array(&temp, sizeof(temp));
-		i++;
-	
-	
 	return status;
 }
 
@@ -662,7 +560,6 @@ uint8_t at_rf_disconnect(void) {
 	END: return status;
 }
 
-
 uint8_t tx(char *data, int len) {
 	/*
 	status = 0 => all AT commands was executed sucesessfully
@@ -682,45 +579,12 @@ uint8_t tx(char *data, int len) {
 		i++;
 	}
 	
-	//WHY???????
- 	i=24;
-	while (i < 27)
-	{
-		usart_putchar(USART_RADIO, i);
-		i++;
-	}
-// 	usart_tx_at(USART_RADIO, CTRL_Z);
-// 	if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-			
-	END: return status;
-}
-
-uint8_t tx2(char *data, int len) {
-	/*
-	status = 0 => all AT commands was executed sucesessfully
-	status > 0 => one of the AT commands was not executed sucessfully.
-	*/
-	uint8_t status = 0;
-	uint8_t i = 0;
-		
-	if (tx_at_response(&m95_tx[0])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_tx[1])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
-	while (i < len)
-	{
-		usart_putchar(USART_RADIO, *(data+i));
-		#ifdef DEBUG
-			usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
-		#endif // DEBUG
-		i++;
-	}
-		
-	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
-	//usart_putchar(USART_RADIO, 0x1a);
- 	if (tx_at_response(&m95_tx[2])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-	//if (tx_at_response(&m95_tx[3])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-	//tx_at_response(&m95_tx[3]);
-	//delay_s(20);
-			
+	#ifdef DEBUG
+		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+	#endif // DEBUG
+	if (tx_at_response(&m95_tx[2])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	if (tx_at_response(&m95_tx[3])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+				
 	END: return status;
 }
 
@@ -823,18 +687,16 @@ ISR(WDT_vect)
 				break;
 			
 			case RF_POWER_ON:
-				radio_power_on();
-// 				if (radio_power_on() == 1) //power on and check if it fails
-// 				{
+				if (radio_power_on() == 1) //power on and check if it fails
+ 				{
 // 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
 // 					controller_next_state = RF_POWER_OFF; //if failure go to power off
 // 					break;
-// 				}
+ 				}
 				controller_next_state = RF_CONNECT;
 				break;
 			
 			case RF_CONNECT: //NEED MORE POWER!!!!!!
-				//at_rf_connect();
 				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
 				{
 // 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
@@ -845,76 +707,49 @@ ISR(WDT_vect)
 				break;
 			
 			case GENERATE_PACKAGE:
-				data_to_char(&tx_data[0], 1, &tx_data_bytes, TRANSFER_DATA_BASE);
-				char sub_topic[3] = "";
-				int i = 0;
-				while (i < 3)
+				transfer_data_package_counter = 0;
+				while (transfer_data_package_counter < TX_DATA_SIZE)
 				{
-					data_to_char2(&tx_data[i], 1, &tx_data_bytes, TRANSFER_DATA_BASE);
-					itoa(i, sub_topic, 10);
- 					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &sub_topic); //convert ascii data to MQTT package.
+					data_to_char(&tx_data[transfer_data_package_counter], 1, &tx_data_bytes, TRANSFER_DATA_BASE); //data to ascii
+					itoa(transfer_data_package_counter, mqtt_sub_topic, 10); //counter to text for sub-topic
+ 					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &mqtt_sub_topic); //convert ascii data to MQTT package.
 					tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-					tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
-					i++;
+					tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+					
+					#ifdef DEBUG //output package size
+						char package_lenght[5] = "";
+						char mystring[5] = "";
+						itoa(transfer_data_length_package, package_lenght, 10);
+						strcpy(mystring, package_lenght);
+						usart_tx_at(USART_TERMINAL, mystring);
+					#endif // DEBUG
+
+					transfer_data_package_counter++;
 				}
-								
-				int j = 0;
-				while (i < 1)
-				{
-					j = 0;
-					while (j<50)
-					{
-						usart_putchar(USART_TERMINAL, tx_data_package[j]);
-						//usart_putchar(USART_TERMINAL, mystring[j]);
-						j++;
- 					}
-					i++;
-				}
-// 								
-				#ifdef DEBUG //output package size
-// 					char package_lenght[5] = "";
-// 					char mystring[5] = "";
-// 					itoa(transfer_data_length_package, package_lenght, 10);
-// 					strcpy(mystring, package_lenght);
-// 					usart_tx_at(USART_TERMINAL, mystring);
-// // 					
-// 					char subtopic[2] = "";
-// 					itoa(POSITION_ANA0, subtopic, 16);
-// 					char mystring2[5] = "";
-// 					strcpy(mystring2, MQTT_TOPIC);
-// 					strcat(mystring2, subtopic);
-// 					usart_tx_at(USART_TERMINAL, mystring2);
-				#endif // DEBUG
+				
 				controller_next_state = TX_DATA;
 				break;
 			
 			case TX_DATA:
-// 				tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-// 				tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+				//GENERATE_PACKAGE AND TX_DATA IS MERGED => THIS CASE IS NOP.
 				controller_next_state = RX_DATA;
 				break;
 			
 			case RX_DATA:
-// 				tx_at_response(&m95_disconnect[0]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-// 				tx_at_response(&m95_connect[11]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-// 				tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-// 				tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
 				controller_next_state = RF_DISCONNECT;
 				break;
 			
 			case RF_DISCONNECT:
-				at_rf_disconnect(); //Disconnect
-// 				if (at_rf_disconnect() != 0) //Status will not be transmitted, but could probably be stored for later.
-// 				{
+ 				if (at_rf_disconnect() != 0) //Status will not be transmitted, but could probably be stored for later.
+ 				{
 // 					//tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_DISNNECT); //set failure status
 // 					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
 // 					break;
-// 				}
+ 				}
 				controller_next_state = RF_POWER_OFF;
 				break;
 			
 			case RF_POWER_OFF:
-				//delay_s(2);
 				radio_power_off_at(); //radio power down
 				controller_next_state = RESET_REGISTERS;
 				break;
@@ -928,7 +763,6 @@ ISR(WDT_vect)
 			default:
 				controller_next_state = RESET_REGISTERS; //TRY RESET.
 				break;
-			
 		}
 		
 		controller_state = controller_next_state; //NEXT STATE => STATE

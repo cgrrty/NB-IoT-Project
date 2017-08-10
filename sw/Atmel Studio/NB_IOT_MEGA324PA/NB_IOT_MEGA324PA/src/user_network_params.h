@@ -23,6 +23,6 @@
 #define  LOCAL_IP "10.10.0.13\r\n" //CHANGE WITH \r\n IN THE COMMAND SECTION.
 
 #define MQTT_TOPIC "LE/"
-//char topic[4] = "LE/";
+char mqtt_sub_topic[3] = "";
 
 #endif /* USER_NETWORK_PARAMS_H_ */

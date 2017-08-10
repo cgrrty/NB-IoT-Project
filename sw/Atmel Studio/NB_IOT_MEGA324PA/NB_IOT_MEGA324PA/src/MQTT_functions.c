@@ -21,6 +21,7 @@ int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic)
 	int len = 0;
 	
 	data.clientID.cstring = "LE";
+	//data.clientID.cstring = MQTT_TOPIC; //FIX SO THIS ONE WORKS, COULD BE AN ADDITIONAL INPUT.
 	data.keepAliveInterval = 20;
 	data.cleansession = 1;
 	data.username.cstring = "";
@@ -30,7 +31,6 @@ int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic)
 	len = MQTTSerialize_connect((unsigned char *)package, buflen, &data);
 	
 	//topicString.cstring = "LE/0"; //MAKE A GENERAL CONFIGUREATION OF THIS PARAMETER
-	//char sub_topic = "";
 	char main_sub_topic[6] = "LE/";
 	strcat(main_sub_topic, sub_topic);
 	topicString.cstring = main_sub_topic;
