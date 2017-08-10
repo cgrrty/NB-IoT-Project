@@ -8,7 +8,7 @@
 #include "MQTT_functions.h" 
 
 /////////////MQTT////////////////////
-int mqtt_packet(char *payload, char *package, int buflen)
+int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic)
 {
 	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	
@@ -29,13 +29,11 @@ int mqtt_packet(char *payload, char *package, int buflen)
 
 	len = MQTTSerialize_connect((unsigned char *)package, buflen, &data);
 	
-	topicString.cstring = "LE/0"; //MAKE A GENERAL CONFIGUREATION OF THIS PARAMETER
-// 	char topic = "LEE/";
-// 	char subtopic = "0";
-// 	char mystring[5] = "";
-// 	strcpy(mystring, topic);
-// 	strcat(mystring, subtopic);
-// 	topicString.cstring = mystring;
+	//topicString.cstring = "LE/0"; //MAKE A GENERAL CONFIGUREATION OF THIS PARAMETER
+	//char sub_topic = "";
+	char main_sub_topic[6] = "LE/";
+	strcat(main_sub_topic, sub_topic);
+	topicString.cstring = main_sub_topic;
 	
 	
 	len += MQTTSerialize_publish((unsigned char *)(package + len), buflen - len, 0, 0, 0, 0, topicString, (unsigned char *)payload, payloadlen);

@@ -845,34 +845,22 @@ ISR(WDT_vect)
 				break;
 			
 			case GENERATE_PACKAGE:
-				
-				
-				//data_to_char(&tx_data, TX_DATA_SIZE, &tx_data_bytes, TRANSFER_DATA_BASE);
 				data_to_char(&tx_data[0], 1, &tx_data_bytes, TRANSFER_DATA_BASE);
-				//data_to_char2(&tx_data, TX_DATA_SIZE, &tx_data_bytes, TRANSFER_DATA_BASE);
-
-				
- 				transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
-				 
-// 				 char package_lenght[5] = "";
-// 				 char mystring[5] = "";
-// 				 itoa(1234, package_lenght, 10);
-// 				 strcpy(mystring, package_lenght);
-				 
-				 //strcpy(mychar, tx_data_bytes[0]);
-				 //transfer_data_length_package = mqtt_packet(&package_lenght, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
-				 
-				 //char tx_data_single_value[5] = ""; //Final data to be transmitted (and stored?)
-				 //strcat(tx_data_single_value, &tx_data_bytes[0]);
-				//tx_data_single_value[] = "2222";
-				//char mychar[5] = "123";
-				
+				char sub_topic[3] = "";
 				int i = 0;
+				while (i < 3)
+				{
+					data_to_char2(&tx_data[i], 1, &tx_data_bytes, TRANSFER_DATA_BASE);
+					itoa(i, sub_topic, 10);
+ 					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &sub_topic); //convert ascii data to MQTT package.
+					tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
+					tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+					i++;
+				}
+								
 				int j = 0;
 				while (i < 1)
 				{
-					//usart_putchar(USART_TERMINAL, &tx_data_bytes[0]); //DEBUG
-					//transfer_data_length_package = mqtt_packet(tx_data_bytes[i], &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE); //convert ascii data to MQTT package.
 					j = 0;
 					while (j<50)
 					{
@@ -880,15 +868,9 @@ ISR(WDT_vect)
 						//usart_putchar(USART_TERMINAL, mystring[j]);
 						j++;
  					}
-					//usart_tx_at(USART_TERMINAL, &tx_data_package); //DEBUG
-					//tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
-					//delay_s(1);
-					
 					i++;
 				}
-// 				usart_tx_at(USART_TERMINAL, &tx_data_package);
-// 				usart_tx_at(USART_TERMINAL, AT_QNSTATUS);
-				
+// 								
 				#ifdef DEBUG //output package size
 // 					char package_lenght[5] = "";
 // 					char mystring[5] = "";
@@ -907,16 +889,16 @@ ISR(WDT_vect)
 				break;
 			
 			case TX_DATA:
-				tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-				tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+// 				tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
+// 				tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
 				controller_next_state = RX_DATA;
 				break;
 			
 			case RX_DATA:
 // 				tx_at_response(&m95_disconnect[0]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
 // 				tx_at_response(&m95_connect[11]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-				tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
-				tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+// 				tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
+// 				tx2(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
 				controller_next_state = RF_DISCONNECT;
 				break;
 			

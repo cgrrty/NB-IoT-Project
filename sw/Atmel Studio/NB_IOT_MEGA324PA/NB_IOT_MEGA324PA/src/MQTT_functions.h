@@ -11,7 +11,7 @@
 
 #include "MQTTPacket.h"
 
-int mqtt_packet(char *payload, char *package, int buflen);
+int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic);
 
 
 #endif /* MQTT_FUNCTIONS_H_ */
