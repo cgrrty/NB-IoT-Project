@@ -93,14 +93,14 @@ typedef struct m95_at {
 //AT TCP/IP commands M95
 #define AT_QICLOSE "AT+QICLOSE\r"  //Same as AT_CIPSHUT, check notes in app note
 #define AT_QISTAT "AT+QISTAT\r"
-#define AT_QISTAT_COMPARE_IP_START "IP START\r\n"
-#define AT_QISTAT_COMPARE_CONNECT_OK "CONNECT OK\r\n"
-#define AT_QISTAT_COMPARE_IP_INITIAL "IP INITIAL\r\n"
-#define AT_QISTAT_COMPARE_IP_STATUS "IP STATUS\r\n"
-#define AT_QISTAT_COMPARE_IP_CLOSE "IP CLOSE\r\n"
-#define AT_QISTAT_COMPARE_IP_GPRSACT "IP GPRSACT\r\n"
-#define AT_QISTAT_COMPARE_TCP_CONNECTING "TCP CONNECTING\r\n"
-#define AT_QISTAT_COMPARE_UDP_CONNECTING "UDP CONNECTING\r\n"
+#define AT_QISTAT_COMPARE_IP_START "STATE: IP START\r\n"
+#define AT_QISTAT_COMPARE_CONNECT_OK "STATE: CONNECT OK\r\n"
+#define AT_QISTAT_COMPARE_IP_INITIAL "STATE: IP INITIAL\r\n"
+#define AT_QISTAT_COMPARE_IP_STATUS "STATE: IP STATUS\r\n"
+#define AT_QISTAT_COMPARE_IP_CLOSE "STATE: IP CLOSE\r\n"
+#define AT_QISTAT_COMPARE_IP_GPRSACT "STATE: IP GPRSACT\r\n"
+#define AT_QISTAT_COMPARE_TCP_CONNECTING "STATE: TCP CONNECTING\r\n"
+#define AT_QISTAT_COMPARE_UDP_CONNECTING "STATE: UDP CONNECTING\r\n"
 #define AT_QPOWD "AT+QPOED\r"
 
 
@@ -135,6 +135,7 @@ typedef struct m95_at {
 #define AT_QISEND "AT+QISEND\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
 #define AT_QISEND_COMPARE "> "
 #define AT_CTRLZ_COMPARE "SEND OK\r"
+#define AT_QISACK "AT+QISACK\r"
 //It must be terminated with ctrl+z.
 //There will be a response from the server.
 
@@ -218,10 +219,11 @@ const static m95_at_t m95_connect[] = {
 
 };
 
-static const m95_at_t m95_tx[3] = {
+static const m95_at_t m95_tx[4] = {
 	{AT_QISTAT, AT_QISTAT_COMPARE_CONNECT_OK, RESPONSE_TIME_300M, AT_REPEAT_LONG}, //NEED LONG??????
 	{AT_QISEND, AT_QISEND_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
-	{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT}
+	{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QISACK, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT}
 };
 
 static const m95_at_t m95_disconnect[] = {

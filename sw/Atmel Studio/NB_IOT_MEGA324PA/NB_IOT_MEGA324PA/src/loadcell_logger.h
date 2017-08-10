@@ -16,7 +16,7 @@
 
 //sampling and averaging times
 #define SAMPLING_TIME 1
-#define AVERAGING_TIME 600
+#define AVERAGING_TIME 1
 
 //Data positions
 #define POSITION_CURRENT 0

@@ -30,6 +30,13 @@ int mqtt_packet(char *payload, char *package, int buflen)
 	len = MQTTSerialize_connect((unsigned char *)package, buflen, &data);
 	
 	topicString.cstring = "LE/0"; //MAKE A GENERAL CONFIGUREATION OF THIS PARAMETER
+// 	char topic = "LEE/";
+// 	char subtopic = "0";
+// 	char mystring[5] = "";
+// 	strcpy(mystring, topic);
+// 	strcat(mystring, subtopic);
+// 	topicString.cstring = mystring;
+	
 	
 	len += MQTTSerialize_publish((unsigned char *)(package + len), buflen - len, 0, 0, 0, 0, topicString, (unsigned char *)payload, payloadlen);
 		
