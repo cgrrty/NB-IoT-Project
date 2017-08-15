@@ -24,5 +24,7 @@
 
 #define MQTT_TOPIC "LE/"
 char mqtt_sub_topic[3] = "";
+//char mqtt_sub_topic = "AVG";
+
 
 #endif /* USER_NETWORK_PARAMS_H_ */

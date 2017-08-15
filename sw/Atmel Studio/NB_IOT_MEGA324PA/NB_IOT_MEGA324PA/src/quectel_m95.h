@@ -49,6 +49,8 @@ typedef struct m95_at {
 #define AT_CGATT "AT+CGATT=<1>"
 #define  AT_QPWD_1 "AT+QPOWD=1\r" //power off normal mode
 #define  AT_QPWD_0 "AT+QPOWD=0\r" //power off emergency
+#define ATO "ATO\r"
+#define ATO0 "ATO0\r"
 
 //AT SMS commands
 #define AT_CMGF "AT+CMGF=1\r"
@@ -69,6 +71,7 @@ typedef struct m95_at {
 #define AT_CIPSEND "AT+CIPSEND\r" //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
 								//It must be terminated with ctrl+z.
 								//There will be a response from the server.
+char TEST_MESSAGE[24] = {0x10, 0x12, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0xc2, 0x14, 0x02, 0x4c, 0x45, 0x30, 0x09, 0x04, 0x4c, 0x45, 0x2f, 0x30, 0x39, 0x36, 0x33, 0xe0};
 
 	//AT+CREG??????????
 	
@@ -88,7 +91,7 @@ typedef struct m95_at {
 //M95 response times
 #define RESPONSE_TIME_30M 3 // (uint32_t)DELAY_1MS_BASE*30 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
 #define RESPONSE_TIME_300M 30 //(uint32_t)DELAY_1MS_BASE*300 //1s ~ delay(333) => 1ms ~ delay_ms(0.33). WHY I DON'T KNOW!!!!!
-#define RESPONSE_TIME_20S 200 // (uint32_t)DELAY_1MS_BASE*20000 //20*1000 //20sec 
+#define RESPONSE_TIME_20S 2000 // (uint32_t)DELAY_1MS_BASE*20000 //20*1000 //20sec 
 
 //AT TCP/IP commands M95
 #define AT_QICLOSE "AT+QICLOSE\r"  //Same as AT_CIPSHUT, check notes in app note
@@ -121,7 +124,10 @@ typedef struct m95_at {
 #define AT_QICSGP "AT+QICSGP=1,\"apn1.lillebakk.com\",\"\",\"\"\r"
 #define AT_QIMUX "AT+QIMUX=0\r" //same as AT_CIPMUX
 #define AT_QIMODE "AT+QIMODE=0\r"
+#define AT_QIMODE_TRANSPARENT "AT+QIMODE=1\r"
 #define AT_QIDNSIP "AT+QIDNSIP=0\r"
+#define AT_QITCFG "AT+QITCFG=3,3,512,0\r"
+//#define AT_QITCFG "AT+QITCFG=?\r"
 
 //ch 3.2 in TCP/IP app note
 #define AT_QIREGAPP "AT+QIREGAPP\r"
@@ -129,13 +135,17 @@ typedef struct m95_at {
 #define AT_QIACT_COMPARE "QIACT"
 #define AT_QILOCIP "AT+QILOCIP\r"
 #define AT_QIOPEN "AT+QIOPEN=\"TCP\",\"10.18.0.39\",1883\r"
+#define AT_QIOPEN_COMPARE "CONNECT OK\r\n"
 
 //CH 3.4 in tcp/ip app note
 #define AT_QISRVC "AT+QISRVC=1\r"
 #define AT_QISEND "AT+QISEND\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
+//#define AT_QISEND "AT+QISEND=33\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
+#define AT_QISEND_FIXED "AT+QISEND=33\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
 #define AT_QISEND_COMPARE "> "
 #define AT_CTRLZ_COMPARE "SEND OK\r"
 #define AT_QISACK "AT+QISACK\r"
+#define AT_QISACK_COMPARE "+QISACK: 0"
 //It must be terminated with ctrl+z.
 //There will be a response from the server.
 
@@ -190,6 +200,39 @@ const static m95_at_t m95_connect[] = {
 	{AT_QIMODE, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
 	{AT_QIDNSIP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
 	{AT_QIREGAPP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QISTAT, AT_QISTAT_COMPARE_IP_START, RESPONSE_TIME_300M, AT_REPEAT}, //NEED LONG??????
+	{AT_QIACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT}, //NEED STATUS IP START
+	{AT_QISTAT, AT_QISTAT_COMPARE_IP_GPRSACT, RESPONSE_TIME_300M, AT_REPEAT}, //NEED LONG??????
+	{AT_QILOCIP, LOCAL_IP, RESPONSE_TIME_300M, AT_REPEAT_LONG}, //NEED IP GPRSACT, IPSTATUS, TCP/UDP CONNECTING, CONNECT OK IP CLOSE
+	{AT_QISTAT, AT_QISTAT_COMPARE_IP_STATUS, RESPONSE_TIME_300M, AT_REPEAT}, //NEED LONG??????
+	{AT_QIOPEN, AT_QIOPEN_COMPARE, RESPONSE_TIME_20S, AT_REPEAT},
+	//{AT_QISRVC, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	//{AT_QLTS, AT_QLTS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT}
+};
+
+static const m95_at_t m95_tx[] = {
+	{AT_QISTAT, AT_QISTAT_COMPARE_CONNECT_OK, RESPONSE_TIME_300M, AT_REPEAT}, //NEED LONG??????
+	{AT_QISEND, AT_QISEND_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QISACK, AT_QISACK_COMPARE, RESPONSE_TIME_300M, AT_REPEAT}
+};
+
+static const m95_at_t m95_disconnect[] = {
+	{AT_QICLOSE, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT} //OK TO HAVE THIS SHORT RESPONSE DUE TO POWER OFF AND NOT SLEEP!
+	//{AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT}
+};
+
+const static m95_at_t m95_connect_transparent[] = {
+	//SEQUENCE MUST MATCH TO VISIO, AND WHAT IS GIVEN FOR THE M95
+	{AT_QNSTATUS, AT_QNSTATUS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT_LONG}, //repeat long due to long time to connect to network
+	{AT_QIFGCNT, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QICSGP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QIMUX, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QIMODE_TRANSPARENT, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QITCFG, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QIDNSIP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QIREGAPP, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
 		
 	{AT_QISTAT, AT_QISTAT_COMPARE_IP_START, RESPONSE_TIME_300M, AT_REPEAT}, //NEED LONG??????
 	{AT_QIACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT_LONG}, //NEED STATUS IP START
@@ -213,24 +256,25 @@ const static m95_at_t m95_connect[] = {
 				*/
 	{AT_QISTAT, AT_QISTAT_COMPARE_IP_STATUS, RESPONSE_TIME_300M, AT_REPEAT}, //NEED LONG??????
 	{AT_QIOPEN, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT},
-		
-	{AT_QISRVC, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
-	{AT_QLTS, AT_QLTS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT}
+	
+	//{AT_QISRVC, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	//{AT_QLTS, AT_QLTS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT}
 
 };
 
-static const m95_at_t m95_tx[4] = {
+static const m95_at_t m95_tx_transparent[] = {
 	{AT_QISTAT, AT_QISTAT_COMPARE_CONNECT_OK, RESPONSE_TIME_300M, AT_REPEAT_LONG}, //NEED LONG??????
-	{AT_QISEND, AT_QISEND_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
-	{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QISEND_FIXED, AT_QISEND_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	//{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
 	{AT_QISACK, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT}
 };
 
-static const m95_at_t m95_disconnect[] = {
-	{AT_QICLOSE, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
-	{AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT}
+static const m95_at_t m95_tx_fixed[] = {
+	{AT_QISTAT, AT_QISTAT_COMPARE_CONNECT_OK, RESPONSE_TIME_300M, AT_REPEAT_LONG}, //NEED LONG??????
+	{AT_QISEND_FIXED, AT_QISEND_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	//{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QISACK, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT}
 };
-
 
 
 #endif /* SIM900_AT_COMMANDS_H_ */

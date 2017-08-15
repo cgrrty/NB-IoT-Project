@@ -17,16 +17,16 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
 	tran = current_value - *(data_array + POSITION_PREV); //tran = current - previous
 	if ((abs(tran) > abs(*(data_array+POSITION_TRAN_MAX))) & (*(data_array+POSITION_ACCU_CNT) > 0)) //first step is not valid due to only one value.
 	{
-		if (tran < 0)
-		{
-			tran_abs = abs(tran); //check if >2047, if yes this is the max limit that could be transferred.
-			if (tran_abs >= 0x7ff) //if yes the set to max value
-			{
-				tran_abs = 0x7ff;
-			}
-			tran_abs |= (1<<11); //flip the MSB of the 12 bits word to set the negative sign.
-			tran = tran_abs;
-		}
+// 		if (tran < 0)
+// 		{
+// 			tran_abs = abs(tran); //check if >2047, if yes this is the max limit that could be transferred.
+// 			if (tran_abs >= 0x7ff) //if yes the set to max value
+// 			{
+// 				tran_abs = 0x7ff;
+// 			}
+// 			tran_abs |= (1<<11); //flip the MSB of the 12 bits word to set the negative sign.
+// 			tran = tran_abs;
+// 		}
 		
 		*(data_array+POSITION_TRAN_MAX) = tran; //store new tran max.
 	}

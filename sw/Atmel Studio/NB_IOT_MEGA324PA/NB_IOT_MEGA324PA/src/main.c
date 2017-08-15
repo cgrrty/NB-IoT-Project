@@ -192,8 +192,10 @@ uint8_t RTC_ISR_ACTIVE = 0;
 //char tx_data_bytes[TRANSFER_DATA_SIZE] = ""; //Final data to be transmitted (and stored?)
 //char tx_data_bytes[TX_DATA_SIZE][5]; //TX_DATA_SIZE amount of strings with length of 5 each.
 char tx_data_bytes[5]; //TX_DATA_SIZE amount of strings with length of 5 each.
+char tx_data_topics[6] = "ABCDE"; //TX_DATA_SIZE amount of strings with length of 5 each.
 #define TRANSFER_DATA_SIZE_PACKAGE (TRANSFER_DATA_SIZE) //ASSUMING 2 TIMES THE DATA SIZE IS THE TOTAL PACKAGE OVERHEAD.
 char tx_data_package[TRANSFER_DATA_SIZE_PACKAGE] = ""; //Final data package generated from the tx_data_bytes array.
+char test_data_package[33] = {0x10, 0x12, 0x00, 0x4, 0x4d, 0x51, 0x54, 0x54, 0x4, 0xc2, 0x00, 0x14, 0x00, 0x2, 0x4c, 0x45, 0x00, 0x00, 0x00, 0x00, 0x30, 0x09, 0x00, 0x4, 0x4c, 0x45, 0x2f, 0x30, 0x36, 0x37, 0x39, 0xe0, 0x00};
 int transfer_data_length_package = 0; //ACTUAL PACKAGE SIZE TO BE TRANSMITTED. CALCULATED IN PROGRAM. KEEP AS LOW AS POSSIBLE!!!!!!
 int transfer_data_package_counter = 0; //amount of packages transferred.
 ////////////////////////////////////////////////////////////////////////////////////
@@ -233,9 +235,10 @@ void reset_char_array(char *array_pointer , uint8_t size) {
 
 uint8_t reset_all_data() {
 	//reset data and date
-	reset_tx_data(&tx_data, &tx_data_reset_values, TX_DATA_SIZE);
+	
 	reset_char_array(&tx_data_bytes, TRANSFER_DATA_SIZE);
 	reset_char_array(&tx_data_package, TRANSFER_DATA_SIZE_PACKAGE);
+	reset_tx_data(&tx_data, &tx_data_reset_values, TX_DATA_SIZE); //why this one must be last to get correct reset values??????
 }
 
 void rtc_init_period(uint16_t period)
@@ -530,17 +533,44 @@ uint8_t at_rf_connect(void) {
 	
 	uint8_t status = 0;
 	uint8_t i = 0;
-	while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+	while (i < 13)
 	{
-		if (tx_at_response(&m95_connect[i])) {goto END;}
+		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+		//delay_ms(500);
 		i++;
 	}
-	if (tx_at_response(&m95_connect[i])) {status = 32; goto END;} else {at_get_radio_network_time();} //get network's time
+	//if (tx_at_response(&m95_connect[i])) {status = 0; goto END;} else {at_get_radio_network_time();} //get network's time
+		
 	
 	END: 
 	
 	return status;
 }
+
+uint8_t at_rf_connect_transparent(void) {
+	/*
+	status = 0 => all AT commands was executed sucesessfully
+	status = 1 => one of the AT commands was not executed sucessfully.
+	status = 32 => QLTS, i.e. the network time didn't execute sucessfully.
+	
+	WILL MATCH FLOWCHART IN VISIO
+	*/
+	
+	uint8_t status = 0;
+	uint8_t i = 0;
+	while (i < ((sizeof(m95_connect_transparent)/(sizeof(m95_connect_transparent[0])))-0))
+	{
+		if (tx_at_response(&m95_connect_transparent[i])) {goto END;}
+		i++;
+	}
+	//if (tx_at_response(&m95_connect_transparent[i])) {status = 32; goto END;} else {at_get_radio_network_time();} //get network's time
+	
+	END: 
+	
+	return status;
+}
+
 
 uint8_t at_rf_disconnect(void) {
 	/*
@@ -567,9 +597,71 @@ uint8_t tx(char *data, int len) {
 	*/
 	uint8_t status = 0;
 	uint8_t i = 0;
+	
+	if (tx_at_response(&m95_tx[0])) {/*status = 0; goto END;*/} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[1])) {/*status = 0; goto END;*/} //SPECIFIED TO ELEMENT 0
 		
-	if (tx_at_response(&m95_tx[0])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_tx[1])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
+	while (i < len)
+	{
+		usart_putchar(USART_RADIO, *(data+i));
+		#ifdef DEBUG
+			//usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
+		#endif // DEBUG
+		i++;
+	}
+	
+	#ifdef DEBUG
+		//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+	#endif // DEBUG
+	
+	if (tx_at_response(&m95_tx[2])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	if (tx_at_response(&m95_tx[3])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	
+	END: return status;
+}
+
+uint8_t tx_transparent(char *data, int len) {
+	int i = 0;
+	while (i < 13)
+	{
+		tx_at_response(&m95_connect[i]);
+		i++;
+	}
+	
+	tx_at_response(&m95_tx[0]);
+	tx_at_response(&m95_tx[1]);
+	
+	i = 0;
+	while (i < len)
+	{
+		usart_putchar(USART_RADIO, *(data+i));
+		i++;
+	}
+	
+	tx_at_response(&m95_tx[2]);
+	tx_at_response(&m95_tx[3]);
+				
+	//END: return status;
+}
+
+uint8_t tx_fixed(char *data, int len) {
+	/*
+	status = 0 => all AT commands was executed sucesessfully
+	status > 0 => one of the AT commands was not executed sucessfully.
+	*/
+	uint8_t status = 0;
+	uint8_t i = 0;
+		
+	if (tx_at_response(&m95_tx_fixed[0])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
+	//if (tx_at_response(&m95_tx_fixed[1])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
+	#define AT_QISEND_FIXED2 "AT+QISEND=\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
+	char mycmd[20] = "";
+	strcpy(mycmd, AT_QISEND_FIXED2);
+	char len2[5] = "";
+	itoa(len, len2, 10);
+	strcat(mycmd, len2);
+	usart_tx_at(USART_TERMINAL, mycmd); //send AT command to radio
+	usart_tx_at(USART_RADIO, mycmd); //send AT command to radio
 	while (i < len)
 	{
 		usart_putchar(USART_RADIO, *(data+i));
@@ -582,12 +674,11 @@ uint8_t tx(char *data, int len) {
 	#ifdef DEBUG
 		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
 	#endif // DEBUG
-	if (tx_at_response(&m95_tx[2])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-	if (tx_at_response(&m95_tx[3])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	if (tx_at_response(&m95_tx_fixed[2])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+//	if (tx_at_response(&m95_tx_fixed[3])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
 				
 	END: return status;
 }
-
 
 ISR(USART0_RX_vect)
 {
@@ -637,10 +728,11 @@ ISR(WDT_vect)
 			case MEASURE:
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_on();
+				tx_data[POSITION_CURRENT] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
 				//////////////////////////////////////////////////////////////////////////
 				
 				//GENERAL MEASUREMENTS
- 				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
+// 				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
 // 				tx_data[POSITION_ANA0] = adc_result_average(ADC_MUX_1V1, ADC_NUM_AVG); //PIN CHANGE HAVE NO EFFECT ON ADCB
 // 				tx_data[POSITION_ANA1] = adc_result_average(ADC_MUX_ADC1, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA2] = adc_result_average(ADC_MUX_ADC2, ADC_NUM_AVG); //
@@ -648,7 +740,8 @@ ISR(WDT_vect)
 // 				tx_data[POSITION_ANA4] = adc_result_average(ADC_MUX_ADC4, ADC_NUM_AVG); //
 // 				tx_data[POSITION_ANA5] = adc_result_average(ADC_MUX_ADC5, ADC_NUM_AVG); //
 // 				//tx_data[POSITION_TEMP] = adc_result_average(ADC_MUX_TEMPSENSE, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
- 				tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
+ 				//tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
+				 tx_data[POSITION_VDD] = ((1.05*1024)/(adc_result_average(ADC_MUX_1V1, 1)))*1000; //PIN CHANGE HAVE NO EFFECT ON ADCB
 				 
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_off();
@@ -683,12 +776,14 @@ ISR(WDT_vect)
 			
 			case STORE_EXT_MEM:
 				tx_data[POSITION_TIME] = 0; //reset accumulation counter if something???????????????
+				
 				controller_next_state = RF_POWER_ON;
 				break;
 			
 			case RF_POWER_ON:
 				if (radio_power_on() == 1) //power on and check if it fails
  				{
+					
 // 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
 // 					controller_next_state = RF_POWER_OFF; //if failure go to power off
 // 					break;
@@ -708,30 +803,35 @@ ISR(WDT_vect)
 			
 			case GENERATE_PACKAGE:
 				transfer_data_package_counter = 0;
-				while (transfer_data_package_counter < TX_DATA_SIZE)
-				{
+				while (transfer_data_package_counter < 8)
+ 				{
 					data_to_char(&tx_data[transfer_data_package_counter], 1, &tx_data_bytes, TRANSFER_DATA_BASE); //data to ascii
 					itoa(transfer_data_package_counter, mqtt_sub_topic, 10); //counter to text for sub-topic
- 					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &mqtt_sub_topic); //convert ascii data to MQTT package.
-					tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
+					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &mqtt_sub_topic); //convert ascii data to MQTT package.
+								
+					if (transfer_data_package_counter > 0)
+					{
+						tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
+					}
+					
 					tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
+					reset_char_array(&mqtt_sub_topic, 3);
 					
 					#ifdef DEBUG //output package size
-						char package_lenght[5] = "";
-						char mystring[5] = "";
-						itoa(transfer_data_length_package, package_lenght, 10);
-						strcpy(mystring, package_lenght);
-						usart_tx_at(USART_TERMINAL, mystring);
+// 						char package_lenght[5] = "";
+// 						char mystring[5] = "";
+// 						itoa(transfer_data_length_package, package_lenght, 10);
+// 						strcpy(mystring, package_lenght);
+// 						usart_tx_at(USART_TERMINAL, mystring);
 					#endif // DEBUG
 
 					transfer_data_package_counter++;
+					
 				}
-				
 				controller_next_state = TX_DATA;
 				break;
 			
 			case TX_DATA:
-				//GENERATE_PACKAGE AND TX_DATA IS MERGED => THIS CASE IS NOP.
 				controller_next_state = RX_DATA;
 				break;
 			
@@ -847,6 +947,8 @@ int main(void)
 	//Shut down radio, might be on
 	//if( (STATUS_PORT & (1<<STATUS_PIN)) == 0x80 ) //have a counter and reset if fail
 	radio_power_off_at(); //ENABLE AGIN!!!!
+	//radio_power_on();
+	
 	
 	
 	
