@@ -443,12 +443,11 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 		
 		usart_tx_at(USART_RADIO, opt->cmd); //send AT command to radio
 		
-		//usart_set_rx_interrupt_level(USART_RADIO, USART_INT_LVL_MED); //READY FOR RECEIVING BYTES
+		//READY FOR RECEIVING BYTES, ENABLE INTERRUPTS
 		sei();
-		//UCSR0B |= (1 << 7); // Enable the USART Recieve Complete interrupt (USART_RXC)
 		usart_rx_complete_interrupt_enable(USART_RADIO);
+		
 		while (response_timeout_counter < response_timeout) {
-			response_timeout_counter++;
 			my_delay_10ms(1);
 			ret = strstr(response, opt->comp); //DO THE COMPARISON AND BREAK THE LOOP
 			if (ret != 0) //correct response received. IDEALLY IT SHOULD CHECK FOR WRONG RESPONSES TO AVOID TIMOUT TO BE RUN IF IT HAPPENS
@@ -458,6 +457,8 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 				} else {
 				status = 1;
 			}
+			
+			response_timeout_counter++;
 		}
 		
 		my_delay_10ms(30);
@@ -465,7 +466,43 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 	}
 	
 	END:
-	//usart_set_rx_interrupt_level(USART_RADIO, USART_INT_LVL_OFF); //disable rx interrupts
+	
+	my_delay_10ms(1); //dummy delay for receiving even more data after compare match.
+	usart_rx_complete_interrupt_disable(USART_RADIO);
+	
+	#ifdef DEBUG
+	usart_tx_at(USART_TERMINAL, response); //DEBUG
+	//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+	#endif // DEBUG
+	
+	return status;
+}
+
+
+uint8_t tx_data_response(char *data, int len) {
+	
+	uint8_t status = 0; //tx status, 0 = alles ok.
+	uint8_t tx_at_cnt = 0; //nr of AT command sent
+	char *ret; //response pointer
+	uint8_t i = 0;
+			
+	reset_char_array(&response, RESPONSE_SIZE); //reset response buffer
+	response_counter = 0; //RESET COUNTER
+
+	while (i < len) //send AT command to radio
+	{
+		usart_putchar(USART_RADIO, *(data+i));
+		//usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
+		i++;
+	}
+	usart_putchar(USART_RADIO, 0x00);
+	//usart_set_rx_interrupt_level(USART_RADIO, USART_INT_LVL_MED); //READY FOR RECEIVING BYTES
+	sei();
+	//UCSR0B |= (1 << 7); // Enable the USART Recieve Complete interrupt (USART_RXC)
+	
+	//wait for response
+	usart_rx_complete_interrupt_enable(USART_RADIO);
+	my_delay_10ms(30); //fixed delay. Could be made as a part of the AT command arrays...
 	usart_rx_complete_interrupt_disable(USART_RADIO);
 	
 	#ifdef DEBUG
@@ -522,7 +559,29 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 	return status;
 }
 
-uint8_t at_rf_connect(void) {
+uint8_t at_rf_status(void) {
+	/*
+	status = 0 => all AT commands was executed sucesessfully
+	status = 1 => one of the AT commands was not executed sucessfully.
+	status = 32 => QLTS, i.e. the network time didn't execute sucessfully.
+	
+	WILL MATCH FLOWCHART IN VISIO
+	*/
+	
+	uint8_t status = 0;
+	uint8_t i = 0;
+	while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-0))
+	{
+		if (tx_at_response(&m95_status[i]) == 1) {status = 1; goto END;}
+		i++;
+	}
+		
+	END: 
+	
+	return status;
+}
+
+uint8_t at_rf_gprs(void) {
 	/*
 	status = 0 => all AT commands was executed sucesessfully
 	status = 1 => one of the AT commands was not executed sucessfully.
@@ -534,9 +593,9 @@ uint8_t at_rf_connect(void) {
 	uint8_t status = 0;
 	uint8_t i = 0;
 	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
-	while (i < 13)
+	while (i < 1)
 	{
-		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+		if (tx_at_response(&m95_gprs[i])) {/*goto END;*/}
 		//delay_ms(500);
 		i++;
 	}
@@ -548,7 +607,7 @@ uint8_t at_rf_connect(void) {
 	return status;
 }
 
-uint8_t at_rf_connect_transparent(void) {
+uint8_t at_rf_connect(uint8_t state) {
 	/*
 	status = 0 => all AT commands was executed sucesessfully
 	status = 1 => one of the AT commands was not executed sucessfully.
@@ -557,20 +616,81 @@ uint8_t at_rf_connect_transparent(void) {
 	WILL MATCH FLOWCHART IN VISIO
 	*/
 	
-	uint8_t status = 0;
+ 	uint8_t status = 0;
 	uint8_t i = 0;
-	while (i < ((sizeof(m95_connect_transparent)/(sizeof(m95_connect_transparent[0])))-0))
+	uint8_t active = 1;
+	
+	while (active == 1) {
+	switch(state) {
+	
+	case 0:
+	
+	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+	while (i < 10)
 	{
-		if (tx_at_response(&m95_connect_transparent[i])) {goto END;}
+		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
 		i++;
 	}
-	//if (tx_at_response(&m95_connect_transparent[i])) {status = 32; goto END;} else {at_get_radio_network_time();} //get network's time
+	if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
+	state = 1;
+	break;
 	
-	END: 
+	//status for open new connection
+	case 1:
+	if (tx_at_response(&m95_connect[10]) == 0) {status = 0; state = 3; break;}
+	if (tx_at_response(&m95_connect[11]) == 0) {status = 0; state = 3; break;}
+	if (tx_at_response(&m95_connect[13]) == 0) {status = 0; state = 3; break;}
+	if (tx_at_response(&m95_connect[12]) == 0) {status = 0; state = 3; break;}
+	state = 2;
+	break;
 	
+	case 2:
+	//already open
+	if (tx_at_response(&m95_connect[14]) == 0) {status = 0; state = 4; break;}
+	state = 1;
+	break;
+	
+	case 3:
+	if (tx_at_response(&m95_connect[15]) == 0) {}
+	if (tx_at_response(&m95_connect[16]) == 0) {}
+	//if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
+	state = 4;
+	break;
+	
+	case 4:
+	active = 0;
+	break;
+	
+	
+	}
+	}
 	return status;
 }
 
+uint8_t tx(char *data, int len) {
+	/*
+	status = 0 => all AT commands was executed sucesessfully
+	status > 0 => one of the AT commands was not executed sucessfully.
+	*/
+	uint8_t status = 0;
+	uint8_t i = 0;
+	
+	START:
+	
+	//if (tx_at_response(&m95_tx[0]) == 1) {} //{status = 0; tx_at_response(&m95_reconnect[0]); tx_at_response(&m95_reconnect[1]); status = 0; goto START;} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[1])) {/*status = 0; goto END;*/} //SPECIFIED TO ELEMENT 0
+
+	tx_data_response(data, len);
+			
+	#ifdef DEBUG
+		//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+	#endif // DEBUG
+	
+	if (tx_at_response(&m95_tx[2])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	if (tx_at_response(&m95_tx[3])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	
+	END: return status;
+}
 
 uint8_t at_rf_disconnect(void) {
 	/*
@@ -587,96 +707,6 @@ uint8_t at_rf_disconnect(void) {
 		i++;
 	}
 	
-	END: return status;
-}
-
-uint8_t tx(char *data, int len) {
-	/*
-	status = 0 => all AT commands was executed sucesessfully
-	status > 0 => one of the AT commands was not executed sucessfully.
-	*/
-	uint8_t status = 0;
-	uint8_t i = 0;
-	
-	if (tx_at_response(&m95_tx[0])) {/*status = 0; goto END;*/} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_tx[1])) {/*status = 0; goto END;*/} //SPECIFIED TO ELEMENT 0
-		
-	while (i < len)
-	{
-		usart_putchar(USART_RADIO, *(data+i));
-		#ifdef DEBUG
-			//usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
-		#endif // DEBUG
-		i++;
-	}
-	
-	#ifdef DEBUG
-		//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
-	#endif // DEBUG
-	
-	if (tx_at_response(&m95_tx[2])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-	if (tx_at_response(&m95_tx[3])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-	
-	END: return status;
-}
-
-uint8_t tx_transparent(char *data, int len) {
-	int i = 0;
-	while (i < 13)
-	{
-		tx_at_response(&m95_connect[i]);
-		i++;
-	}
-	
-	tx_at_response(&m95_tx[0]);
-	tx_at_response(&m95_tx[1]);
-	
-	i = 0;
-	while (i < len)
-	{
-		usart_putchar(USART_RADIO, *(data+i));
-		i++;
-	}
-	
-	tx_at_response(&m95_tx[2]);
-	tx_at_response(&m95_tx[3]);
-				
-	//END: return status;
-}
-
-uint8_t tx_fixed(char *data, int len) {
-	/*
-	status = 0 => all AT commands was executed sucesessfully
-	status > 0 => one of the AT commands was not executed sucessfully.
-	*/
-	uint8_t status = 0;
-	uint8_t i = 0;
-		
-	if (tx_at_response(&m95_tx_fixed[0])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
-	//if (tx_at_response(&m95_tx_fixed[1])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0
-	#define AT_QISEND_FIXED2 "AT+QISEND=\r"  //init send mode. THis command will returnm ">", and hence the data to be sent could be transmitted to the module.
-	char mycmd[20] = "";
-	strcpy(mycmd, AT_QISEND_FIXED2);
-	char len2[5] = "";
-	itoa(len, len2, 10);
-	strcat(mycmd, len2);
-	usart_tx_at(USART_TERMINAL, mycmd); //send AT command to radio
-	usart_tx_at(USART_RADIO, mycmd); //send AT command to radio
-	while (i < len)
-	{
-		usart_putchar(USART_RADIO, *(data+i));
-		#ifdef DEBUG
-			usart_putchar(USART_TERMINAL, *(data+i)); //DEBUG
-		#endif // DEBUG
-		i++;
-	}
-	
-	#ifdef DEBUG
-		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
-	#endif // DEBUG
-	if (tx_at_response(&m95_tx_fixed[2])) {status = 1; goto END;} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-//	if (tx_at_response(&m95_tx_fixed[3])) {/*status = 1; goto END;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
-				
 	END: return status;
 }
 
@@ -792,7 +822,9 @@ ISR(WDT_vect)
 				break;
 			
 			case RF_CONNECT: //NEED MORE POWER!!!!!!
-				if (at_rf_connect() != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
+				at_rf_status();
+				at_rf_gprs();
+				if (at_rf_connect(0) != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
 				{
 // 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
 // 					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
@@ -802,16 +834,17 @@ ISR(WDT_vect)
 				break;
 			
 			case GENERATE_PACKAGE:
-				transfer_data_package_counter = 0;
+				transfer_data_package_counter = 2;
 				while (transfer_data_package_counter < 8)
  				{
 					data_to_char(&tx_data[transfer_data_package_counter], 1, &tx_data_bytes, TRANSFER_DATA_BASE); //data to ascii
 					itoa(transfer_data_package_counter, mqtt_sub_topic, 10); //counter to text for sub-topic
 					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &mqtt_sub_topic); //convert ascii data to MQTT package.
 								
-					if (transfer_data_package_counter > 0)
+					if (transfer_data_package_counter > 2)
 					{
-						tx_at_response(&m95_connect[12]); //WHY NEED THIS ONE AGAIN? SEEMS TO SHUT DOWN TCP CONNECTION AFTER SENDING ONE MESSAGE.
+						//status for open new connection
+						at_rf_connect(1);	
 					}
 					
 					tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
