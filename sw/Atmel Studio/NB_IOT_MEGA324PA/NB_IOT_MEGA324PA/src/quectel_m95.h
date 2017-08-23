@@ -242,8 +242,7 @@ const static m95_at_t m95_network[] = {
 
 const static m95_at_t m95_gprs[] = {
 	//SEQUENCE MUST MATCH TO VISIO, AND WHAT IS GIVEN FOR THE M95
-	{AT_CGATT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT},
-		
+	{AT_CGATT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT}
 };
 
 

@@ -570,9 +570,10 @@ uint8_t at_rf_status(void) {
 	
 	uint8_t status = 0;
 	uint8_t i = 0;
-	while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-0))
+	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-0))
+	while (i < 1)
 	{
-		if (tx_at_response(&m95_status[i]) == 1) {status = 1; goto END;}
+		if (tx_at_response(&m95_status[i]) == 1) {status = 0; goto END;}
 		i++;
 	}
 		
@@ -592,7 +593,7 @@ uint8_t at_rf_gprs(void) {
 	
 	uint8_t status = 0;
 	uint8_t i = 0;
-	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-0))
 	while (i < 1)
 	{
 		if (tx_at_response(&m95_gprs[i])) {/*goto END;*/}
@@ -624,7 +625,7 @@ uint8_t at_rf_connect(uint8_t state) {
 	switch(state) {
 	
 	case 0:
-	
+	i = 0;
 	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
 	while (i < 10)
 	{
@@ -637,28 +638,29 @@ uint8_t at_rf_connect(uint8_t state) {
 	
 	//status for open new connection
 	case 1:
-	if (tx_at_response(&m95_connect[10]) == 0) {status = 0; state = 3; break;}
-	if (tx_at_response(&m95_connect[11]) == 0) {status = 0; state = 3; break;}
-	if (tx_at_response(&m95_connect[13]) == 0) {status = 0; state = 3; break;}
-	if (tx_at_response(&m95_connect[12]) == 0) {status = 0; state = 3; break;}
+	//qistat: ip
+	if (tx_at_response(&m95_connect[12]) == 0) {status = 0; state = 3; break;} //ip close
+	if (tx_at_response(&m95_connect[10]) == 0) {status = 0; state = 3; break;} //ip initial
+	if (tx_at_response(&m95_connect[11]) == 0) {status = 0; state = 3; break;} //ip status
+	
+	//if (tx_at_response(&m95_connect[13]) == 0) {status = 0; state = 3; break;} //already connect
 	state = 2;
 	break;
 	
 	case 2:
-	//already open
-	if (tx_at_response(&m95_connect[14]) == 0) {status = 0; state = 4; break;}
+	//qistat: connect ok.
+	if (tx_at_response(&m95_connect[14]) == 0) {status = 0; state = 4; break;} //connect ok 
 	state = 1;
 	break;
 	
 	case 3:
-	if (tx_at_response(&m95_connect[15]) == 0) {}
-	if (tx_at_response(&m95_connect[16]) == 0) {}
-	//if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
+	if (tx_at_response(&m95_connect[15]) == 0) {} //qiopen
+	if (tx_at_response(&m95_connect[16]) == 0) {} //qisrvc
 	state = 4;
 	break;
 	
 	case 4:
-	active = 0;
+	active = 0; //end of connection.
 	break;
 	
 	
@@ -678,7 +680,7 @@ uint8_t tx(char *data, int len) {
 	START:
 	
 	//if (tx_at_response(&m95_tx[0]) == 1) {} //{status = 0; tx_at_response(&m95_reconnect[0]); tx_at_response(&m95_reconnect[1]); status = 0; goto START;} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_tx[1])) {/*status = 0; goto END;*/} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[1]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
 
 	tx_data_response(data, len);
 			
@@ -688,6 +690,7 @@ uint8_t tx(char *data, int len) {
 	
 	if (tx_at_response(&m95_tx[2])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
 	if (tx_at_response(&m95_tx[3])) {/*status = 0; goto START;*/} //SPECIFIED TO ELEMENT 0 FIX!!!!!!
+	tx_at_response(&m95_disconnect[0]); //DEBUG. This might be faster since the TCP is closed anyway... no solution found why it closes this fast...
 	
 	END: return status;
 }
@@ -701,11 +704,13 @@ uint8_t at_rf_disconnect(void) {
 	*/
 	uint8_t status = 0;
 	uint8_t i = 0;
-	while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
-	{
-		if (tx_at_response(&m95_disconnect[i])) {goto END;}
-		i++;
-	}
+// 	while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
+// 	{
+// 		if (tx_at_response(&m95_disconnect[i])) {goto END;}
+// 		i++;
+// 	}
+// 	
+	if (tx_at_response(&m95_disconnect[1])) {goto END;} //DEBUG, since the close is already done in the tx
 	
 	END: return status;
 }
@@ -822,13 +827,19 @@ ISR(WDT_vect)
 				break;
 			
 			case RF_CONNECT: //NEED MORE POWER!!!!!!
-				at_rf_status();
+				if (at_rf_status() != 0)
+				{
+					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
+					break;
+				}
+				 
+				//usart_putchar(USART_TERMINAL, 0x40);
 				at_rf_gprs();
 				if (at_rf_connect(0) != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
 				{
-// 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
-// 					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
-// 					break;
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
+					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
+					break;
 				}
 				controller_next_state = GENERATE_PACKAGE;
 				break;
@@ -844,7 +855,7 @@ ISR(WDT_vect)
 					if (transfer_data_package_counter > 2)
 					{
 						//status for open new connection
-						at_rf_connect(1);	
+						at_rf_connect(1); //1	
 					}
 					
 					tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
