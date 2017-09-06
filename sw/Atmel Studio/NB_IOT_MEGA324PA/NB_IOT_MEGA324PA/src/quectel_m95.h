@@ -131,6 +131,7 @@ char TEST_MESSAGE[24] = {0x10, 0x12, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0xc2, 0
 //ch 3.1 in TCP/IP app note
 #define AT_QIFGCNT "AT+QIFGCNT=0\r" //config uart id
 #define AT_QICSGP "AT+QICSGP=1,\"apn1.lillebakk.com\",\"\",\"\"\r"
+//#define AT_QICSGP "AT+QICSGP=1,\"apn.com4.no\",\"\",\"\"\r"
 #define AT_QIMUX "AT+QIMUX=0\r" //same as AT_CIPMUX
 #define AT_QIMODE "AT+QIMODE=0\r"
 #define AT_QIMODE_TRANSPARENT "AT+QIMODE=1\r"
@@ -143,7 +144,8 @@ char TEST_MESSAGE[24] = {0x10, 0x12, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0xc2, 0
 #define AT_QIACT "AT+QIACT\r"
 #define AT_QIACT_COMPARE "QIACT"
 #define AT_QILOCIP "AT+QILOCIP\r"
-#define AT_QIOPEN "AT+QIOPEN=\"TCP\",\"10.18.0.39\",1883\r"
+#define AT_QIOPEN "AT+QIOPEN=\"TCP\",\"10.18.0.39\",1883\r" //FIX TO GET MODULAR!!!!!
+//#define AT_QIOPEN "AT+QIOPEN=\"TCP\",\"37.187.106.16\",1883\r"
 #define AT_QIOPEN_COMPARE "CONNECT OK\r\n"
 //#define AT_QIOPEN_COMPARE "CONNECT" //////////////////////////////////////////////////////////////////////////
 

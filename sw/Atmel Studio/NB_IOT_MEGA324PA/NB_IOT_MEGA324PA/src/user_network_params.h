@@ -15,9 +15,8 @@
 #define PASSWORD ""
 
 #define IP_MODE "TCP"
-//#define SERVER_ADDR "10.18.0.36" //TCP server on remote desktop
-//#define SERVER_PORT "23" //TCP server port on remote desktop
-#define SERVER_ADDR "10.18.0.39" //MQTT server (broker) on remote desktop
+//#define SERVER_ADDR "10.18.0.39" //MQTT server (broker) on remote desktop
+#define SERVER_ADDR "test.mosquitto.org" //MQTT server (broker) on remote desktop
 #define SERVER_PORT "1883" //MQTT server port on remote desktop
 
 #define  LOCAL_IP "10.10.0.13\r\n" //CHANGE WITH \r\n IN THE COMMAND SECTION.

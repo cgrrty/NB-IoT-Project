@@ -1618,7 +1618,7 @@ END GROUP
  *(.fini0)
                 0x0000199c                _etext = .
 
-.data           0x00800100      0x368 load address 0x0000199c
+.data           0x00800100      0x370 load address 0x0000199c
                 0x00800100                PROVIDE (__data_start, .)
  *(.data)
  *(.data*)
@@ -1631,84 +1631,84 @@ END GROUP
  .rodata        0x00800109       0x31 src/MQTT_functions.o
  *(.rodata*)
  .rodata.str1.1
-                0x0080013a      0x213 src/main.o
-                                0x22d (size before relaxing)
+                0x0080013a      0x21b src/main.o
+                                0x235 (size before relaxing)
  .rodata.tx_data_reset_values
-                0x0080034d       0x22 src/main.o
+                0x00800355       0x22 src/main.o
  .rodata.m95_disconnect
-                0x0080036f       0x12 src/main.o
+                0x00800377       0x12 src/main.o
  .rodata.m95_tx
-                0x00800381       0x24 src/main.o
+                0x00800389       0x24 src/main.o
  .rodata.m95_connect
-                0x008003a5       0xa2 src/main.o
+                0x008003ad       0xa2 src/main.o
  .rodata.m95_gprs
-                0x00800447        0x9 src/main.o
+                0x0080044f        0x9 src/main.o
  .rodata.m95_status
-                0x00800450        0x9 src/main.o
+                0x00800458        0x9 src/main.o
  .rodata.str1.1
-                0x00800459        0xc src/MQTTConnectClient.o
+                0x00800461        0xc src/MQTTConnectClient.o
  .rodata.str1.1
-                0x00800465        0x3 src/MQTT_functions.o
+                0x0080046d        0x3 src/MQTT_functions.o
                                   0x4 (size before relaxing)
  *(.gnu.linkonce.d*)
-                0x00800468                . = ALIGN (0x2)
-                0x00800468                _edata = .
-                0x00800468                PROVIDE (__data_end, .)
+                0x00800470                . = ALIGN (0x2)
+                0x00800470                _edata = .
+                0x00800470                PROVIDE (__data_end, .)
 
-.bss            0x00800468      0x124
-                0x00800468                PROVIDE (__bss_start, .)
+.bss            0x00800470      0x124
+                0x00800470                PROVIDE (__bss_start, .)
  *(.bss)
  *(.bss*)
  .bss.transfer_data_package_counter
-                0x00800468        0x2 src/main.o
-                0x00800468                transfer_data_package_counter
+                0x00800470        0x2 src/main.o
+                0x00800470                transfer_data_package_counter
  .bss.transfer_data_length_package
-                0x0080046a        0x2 src/main.o
-                0x0080046a                transfer_data_length_package
+                0x00800472        0x2 src/main.o
+                0x00800472                transfer_data_length_package
  .bss.tx_data_package
-                0x0080046c       0x64 src/main.o
-                0x0080046c                tx_data_package
+                0x00800474       0x64 src/main.o
+                0x00800474                tx_data_package
  .bss.RTC_ISR_ACTIVE
-                0x008004d0        0x1 src/main.o
-                0x008004d0                RTC_ISR_ACTIVE
+                0x008004d8        0x1 src/main.o
+                0x008004d8                RTC_ISR_ACTIVE
  .bss.accu_data
-                0x008004d1        0x4 src/main.o
-                0x008004d1                accu_data
- .bss.response_timeout_counter
-                0x008004d5        0x4 src/main.o
-                0x008004d5                response_timeout_counter
- .bss.response_timeout
                 0x008004d9        0x4 src/main.o
-                0x008004d9                response_timeout
+                0x008004d9                accu_data
+ .bss.response_timeout_counter
+                0x008004dd        0x4 src/main.o
+                0x008004dd                response_timeout_counter
+ .bss.response_timeout
+                0x008004e1        0x4 src/main.o
+                0x008004e1                response_timeout
  .bss.response_counter
-                0x008004dd        0x1 src/main.o
-                0x008004dd                response_counter
+                0x008004e5        0x1 src/main.o
+                0x008004e5                response_counter
  .bss.transmit_counter
-                0x008004de        0x2 src/main.o
-                0x008004de                transmit_counter
+                0x008004e6        0x2 src/main.o
+                0x008004e6                transmit_counter
  .bss.controller_next_state
-                0x008004e0        0x1 src/main.o
-                0x008004e0                controller_next_state
+                0x008004e8        0x1 src/main.o
+                0x008004e8                controller_next_state
  .bss.controller_state
-                0x008004e1        0x1 src/main.o
-                0x008004e1                controller_state
+                0x008004e9        0x1 src/main.o
+                0x008004e9                controller_state
  .bss.mqtt_sub_topic
-                0x008004e2        0x3 src/main.o
-                0x008004e2                mqtt_sub_topic
+                0x008004ea        0x3 src/main.o
+                0x008004ea                mqtt_sub_topic
  *(COMMON)
- COMMON         0x008004e5       0xa7 src/main.o
-                0x008004e5                response
-                0x00800565                tx_data_bytes
-                0x0080056a                tx_data
-                0x0080058c                PROVIDE (__bss_end, .)
+ COMMON         0x008004ed       0xa7 src/main.o
+                0x008004ed                response
+                0x0080056d                tx_data_bytes
+                0x00800572                tx_data
+                0x00800594                PROVIDE (__bss_end, .)
                 0x0000199c                __data_load_start = LOADADDR (.data)
-                0x00001d04                __data_load_end = (__data_load_start + SIZEOF (.data))
+                0x00001d0c                __data_load_end = (__data_load_start + SIZEOF (.data))
 
-.noinit         0x0080058c        0x0
+.noinit         0x00800594        0x0
                 [!provide]                PROVIDE (__noinit_start, .)
  *(.noinit*)
                 [!provide]                PROVIDE (__noinit_end, .)
-                0x0080058c                _end = .
+                0x00800594                _end = .
                 [!provide]                PROVIDE (__heap_start, .)
 
 .eeprom         0x00810000        0x0
@@ -1856,7 +1856,7 @@ END GROUP
  .debug_frame   0x00000a64       0x84 src/MQTT_functions.o
  .debug_frame   0x00000ae8       0x24 src/ASF/common/boards/user_board/init.o
 
-.debug_str      0x00000000    0x15125
+.debug_str      0x00000000    0x1512d
  *(.debug_str)
  .debug_str     0x00000000      0x255 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/atmel/ATmega_DFP/1.2.132/gcc/dev/atmega324pa/avr5/crtatmega324pa.o
  .debug_str     0x00000255    0x10b79 src/ASF/common/services/clock/mega/sysclk.o
@@ -1865,17 +1865,17 @@ END GROUP
                               0x118f0 (size before relaxing)
  .debug_str     0x0001199b      0xcfd src/loadcell_logger.o
                               0x11b24 (size before relaxing)
- .debug_str     0x00012698     0x24f7 src/main.o
-                              0x147b1 (size before relaxing)
- .debug_str     0x00014b8f      0x340 src/MQTTConnectClient.o
+ .debug_str     0x00012698     0x24ff src/main.o
+                              0x147b9 (size before relaxing)
+ .debug_str     0x00014b97      0x340 src/MQTTConnectClient.o
                                0x46cd (size before relaxing)
- .debug_str     0x00014ecf      0x133 src/MQTTPacket.o
+ .debug_str     0x00014ed7      0x133 src/MQTTPacket.o
                                0x45bf (size before relaxing)
- .debug_str     0x00015002       0xbe src/MQTTSerializePublish.o
+ .debug_str     0x0001500a       0xbe src/MQTTSerializePublish.o
                                0x45a3 (size before relaxing)
- .debug_str     0x000150c0       0x3a src/MQTT_functions.o
+ .debug_str     0x000150c8       0x3a src/MQTT_functions.o
                                0x44e8 (size before relaxing)
- .debug_str     0x000150fa       0x2b src/ASF/common/boards/user_board/init.o
+ .debug_str     0x00015102       0x2b src/ASF/common/boards/user_board/init.o
                               0x11535 (size before relaxing)
 
 .debug_loc      0x00000000     0x3e51

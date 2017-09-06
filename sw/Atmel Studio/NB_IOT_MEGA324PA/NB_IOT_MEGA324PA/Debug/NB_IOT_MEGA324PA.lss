@@ -3,33 +3,33 @@ NB_IOT_MEGA324PA.elf:     file format elf32-avr
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 .data         00000368  00800100  0000199c  00001a30  2**0
+  0 .data         00000370  00800100  0000199c  00001a30  2**0
                   CONTENTS, ALLOC, LOAD, DATA
   1 .text         0000199c  00000000  00000000  00000094  2**1
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  2 .bss          00000124  00800468  00800468  00001d98  2**0
+  2 .bss          00000124  00800470  00800470  00001da0  2**0
                   ALLOC
-  3 .comment      00000030  00000000  00000000  00001d98  2**0
+  3 .comment      00000030  00000000  00000000  00001da0  2**0
                   CONTENTS, READONLY
-  4 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  00001dc8  2**2
+  4 .note.gnu.avr.deviceinfo 00000040  00000000  00000000  00001dd0  2**2
                   CONTENTS, READONLY
-  5 .debug_aranges 00000310  00000000  00000000  00001e08  2**0
+  5 .debug_aranges 00000310  00000000  00000000  00001e10  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_info   00004f9c  00000000  00000000  00002118  2**0
+  6 .debug_info   00004f9c  00000000  00000000  00002120  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_abbrev 00001972  00000000  00000000  000070b4  2**0
+  7 .debug_abbrev 00001972  00000000  00000000  000070bc  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   00003804  00000000  00000000  00008a26  2**0
+  8 .debug_line   00003804  00000000  00000000  00008a2e  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  00000b0c  00000000  00000000  0000c22c  2**2
+  9 .debug_frame  00000b0c  00000000  00000000  0000c234  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    00015125  00000000  00000000  0000cd38  2**0
+ 10 .debug_str    0001512d  00000000  00000000  0000cd40  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00003e51  00000000  00000000  00021e5d  2**0
+ 11 .debug_loc    00003e51  00000000  00000000  00021e6d  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 00000298  00000000  00000000  00025cae  2**0
+ 12 .debug_ranges 00000298  00000000  00000000  00025cbe  2**0
                   CONTENTS, READONLY, DEBUGGING
- 13 .debug_macro  00005ff5  00000000  00000000  00025f46  2**0
+ 13 .debug_macro  00005ff5  00000000  00000000  00025f56  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -127,13 +127,13 @@ Disassembly of section .text:
       aa:	02 c0       	rjmp	.+4      	; 0xb0 <__do_copy_data+0x10>
       ac:	05 90       	lpm	r0, Z+
       ae:	0d 92       	st	X+, r0
-      b0:	a8 36       	cpi	r26, 0x68	; 104
+      b0:	a0 37       	cpi	r26, 0x70	; 112
       b2:	b1 07       	cpc	r27, r17
       b4:	d9 f7       	brne	.-10     	; 0xac <__do_copy_data+0xc>
 
 000000b6 <__do_clear_bss>:
       b6:	25 e0       	ldi	r18, 0x05	; 5
-      b8:	a8 e6       	ldi	r26, 0x68	; 104
+      b8:	a0 e7       	ldi	r26, 0x70	; 112
       ba:	b4 e0       	ldi	r27, 0x04	; 4
       bc:	01 c0       	rjmp	.+2      	; 0xc0 <.do_clear_bss_start>
 
@@ -141,7 +141,7 @@ Disassembly of section .text:
       be:	1d 92       	st	X+, r1
 
 000000c0 <.do_clear_bss_start>:
-      c0:	ac 38       	cpi	r26, 0x8C	; 140
+      c0:	a4 39       	cpi	r26, 0x94	; 148
       c2:	b2 07       	cpc	r27, r18
       c4:	e1 f7       	brne	.-8      	; 0xbe <.do_clear_bss_loop>
       c6:	59 d6       	rcall	.+3250   	; 0xd7a <main>
@@ -720,17 +720,17 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
 
 00000394 <reset_all_data>:
      394:	64 e6       	ldi	r22, 0x64	; 100
-     396:	85 e6       	ldi	r24, 0x65	; 101
+     396:	8d e6       	ldi	r24, 0x6D	; 109
      398:	95 e0       	ldi	r25, 0x05	; 5
      39a:	ee df       	rcall	.-36     	; 0x378 <reset_char_array>
      39c:	64 e6       	ldi	r22, 0x64	; 100
-     39e:	8c e6       	ldi	r24, 0x6C	; 108
+     39e:	84 e7       	ldi	r24, 0x74	; 116
      3a0:	94 e0       	ldi	r25, 0x04	; 4
      3a2:	ea df       	rcall	.-44     	; 0x378 <reset_char_array>
      3a4:	41 e1       	ldi	r20, 0x11	; 17
-     3a6:	6d e4       	ldi	r22, 0x4D	; 77
+     3a6:	65 e5       	ldi	r22, 0x55	; 85
      3a8:	73 e0       	ldi	r23, 0x03	; 3
-     3aa:	8a e6       	ldi	r24, 0x6A	; 106
+     3aa:	82 e7       	ldi	r24, 0x72	; 114
      3ac:	95 e0       	ldi	r25, 0x05	; 5
      3ae:	d4 cf       	rjmp	.-88     	; 0x358 <reset_tx_data>
      3b0:	08 95       	ret
@@ -1035,9 +1035,9 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      5e2:	19 82       	std	Y+1, r1	; 0x01
      5e4:	1b 82       	std	Y+3, r1	; 0x03
      5e6:	0f 2e       	mov	r0, r31
-     5e8:	f8 ef       	ldi	r31, 0xF8	; 248
+     5e8:	f0 e0       	ldi	r31, 0x00	; 0
      5ea:	ef 2e       	mov	r14, r31
-     5ec:	f4 e0       	ldi	r31, 0x04	; 4
+     5ec:	f5 e0       	ldi	r31, 0x05	; 5
      5ee:	ff 2e       	mov	r15, r31
      5f0:	f0 2d       	mov	r31, r0
      5f2:	0a e0       	ldi	r16, 0x0A	; 10
@@ -1055,7 +1055,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      60c:	f8 01       	movw	r30, r16
      60e:	ee 0f       	add	r30, r30
      610:	ff 1f       	adc	r31, r31
-     612:	e6 59       	subi	r30, 0x96	; 150
+     612:	ee 58       	subi	r30, 0x8E	; 142
      614:	fa 4f       	sbci	r31, 0xFA	; 250
      616:	91 83       	std	Z+1, r25	; 0x01
      618:	80 83       	st	Z, r24
@@ -1091,22 +1091,22 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      650:	10 e0       	ldi	r17, 0x00	; 0
      652:	00 e0       	ldi	r16, 0x00	; 0
      654:	60 e8       	ldi	r22, 0x80	; 128
-     656:	85 ee       	ldi	r24, 0xE5	; 229
+     656:	8d ee       	ldi	r24, 0xED	; 237
      658:	94 e0       	ldi	r25, 0x04	; 4
      65a:	8e de       	rcall	.-740    	; 0x378 <reset_char_array>
-     65c:	10 92 dd 04 	sts	0x04DD, r1	; 0x8004dd <response_counter>
+     65c:	10 92 e5 04 	sts	0x04E5, r1	; 0x8004e5 <response_counter>
      660:	8c 81       	ldd	r24, Y+4	; 0x04
      662:	9d 81       	ldd	r25, Y+5	; 0x05
      664:	ae 81       	ldd	r26, Y+6	; 0x06
      666:	bf 81       	ldd	r27, Y+7	; 0x07
-     668:	80 93 d9 04 	sts	0x04D9, r24	; 0x8004d9 <response_timeout>
-     66c:	90 93 da 04 	sts	0x04DA, r25	; 0x8004da <response_timeout+0x1>
-     670:	a0 93 db 04 	sts	0x04DB, r26	; 0x8004db <response_timeout+0x2>
-     674:	b0 93 dc 04 	sts	0x04DC, r27	; 0x8004dc <response_timeout+0x3>
-     678:	10 92 d5 04 	sts	0x04D5, r1	; 0x8004d5 <response_timeout_counter>
-     67c:	10 92 d6 04 	sts	0x04D6, r1	; 0x8004d6 <response_timeout_counter+0x1>
-     680:	10 92 d7 04 	sts	0x04D7, r1	; 0x8004d7 <response_timeout_counter+0x2>
-     684:	10 92 d8 04 	sts	0x04D8, r1	; 0x8004d8 <response_timeout_counter+0x3>
+     668:	80 93 e1 04 	sts	0x04E1, r24	; 0x8004e1 <response_timeout>
+     66c:	90 93 e2 04 	sts	0x04E2, r25	; 0x8004e2 <response_timeout+0x1>
+     670:	a0 93 e3 04 	sts	0x04E3, r26	; 0x8004e3 <response_timeout+0x2>
+     674:	b0 93 e4 04 	sts	0x04E4, r27	; 0x8004e4 <response_timeout+0x3>
+     678:	10 92 dd 04 	sts	0x04DD, r1	; 0x8004dd <response_timeout_counter>
+     67c:	10 92 de 04 	sts	0x04DE, r1	; 0x8004de <response_timeout_counter+0x1>
+     680:	10 92 df 04 	sts	0x04DF, r1	; 0x8004df <response_timeout_counter+0x2>
+     684:	10 92 e0 04 	sts	0x04E0, r1	; 0x8004e0 <response_timeout_counter+0x3>
      688:	68 81       	ld	r22, Y
      68a:	79 81       	ldd	r23, Y+1	; 0x01
      68c:	80 ec       	ldi	r24, 0xC0	; 192
@@ -1118,14 +1118,14 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      698:	81 81       	ldd	r24, Z+1	; 0x01
      69a:	80 68       	ori	r24, 0x80	; 128
      69c:	81 83       	std	Z+1, r24	; 0x01
-     69e:	40 91 d5 04 	lds	r20, 0x04D5	; 0x8004d5 <response_timeout_counter>
-     6a2:	50 91 d6 04 	lds	r21, 0x04D6	; 0x8004d6 <response_timeout_counter+0x1>
-     6a6:	60 91 d7 04 	lds	r22, 0x04D7	; 0x8004d7 <response_timeout_counter+0x2>
-     6aa:	70 91 d8 04 	lds	r23, 0x04D8	; 0x8004d8 <response_timeout_counter+0x3>
-     6ae:	80 91 d9 04 	lds	r24, 0x04D9	; 0x8004d9 <response_timeout>
-     6b2:	90 91 da 04 	lds	r25, 0x04DA	; 0x8004da <response_timeout+0x1>
-     6b6:	a0 91 db 04 	lds	r26, 0x04DB	; 0x8004db <response_timeout+0x2>
-     6ba:	b0 91 dc 04 	lds	r27, 0x04DC	; 0x8004dc <response_timeout+0x3>
+     69e:	40 91 dd 04 	lds	r20, 0x04DD	; 0x8004dd <response_timeout_counter>
+     6a2:	50 91 de 04 	lds	r21, 0x04DE	; 0x8004de <response_timeout_counter+0x1>
+     6a6:	60 91 df 04 	lds	r22, 0x04DF	; 0x8004df <response_timeout_counter+0x2>
+     6aa:	70 91 e0 04 	lds	r23, 0x04E0	; 0x8004e0 <response_timeout_counter+0x3>
+     6ae:	80 91 e1 04 	lds	r24, 0x04E1	; 0x8004e1 <response_timeout>
+     6b2:	90 91 e2 04 	lds	r25, 0x04E2	; 0x8004e2 <response_timeout+0x1>
+     6b6:	a0 91 e3 04 	lds	r26, 0x04E3	; 0x8004e3 <response_timeout+0x2>
+     6ba:	b0 91 e4 04 	lds	r27, 0x04E4	; 0x8004e4 <response_timeout+0x3>
      6be:	48 17       	cp	r20, r24
      6c0:	59 07       	cpc	r21, r25
      6c2:	6a 07       	cpc	r22, r26
@@ -1135,30 +1135,30 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      6ca:	81 de       	rcall	.-766    	; 0x3ce <my_delay_10ms>
      6cc:	6a 81       	ldd	r22, Y+2	; 0x02
      6ce:	7b 81       	ldd	r23, Y+3	; 0x03
-     6d0:	85 ee       	ldi	r24, 0xE5	; 229
+     6d0:	8d ee       	ldi	r24, 0xED	; 237
      6d2:	94 e0       	ldi	r25, 0x04	; 4
      6d4:	0e 94 6d 0c 	call	0x18da	; 0x18da <strstr>
      6d8:	89 2b       	or	r24, r25
      6da:	99 f5       	brne	.+102    	; 0x742 <tx_at_response+0x104>
-     6dc:	80 91 d5 04 	lds	r24, 0x04D5	; 0x8004d5 <response_timeout_counter>
-     6e0:	90 91 d6 04 	lds	r25, 0x04D6	; 0x8004d6 <response_timeout_counter+0x1>
-     6e4:	a0 91 d7 04 	lds	r26, 0x04D7	; 0x8004d7 <response_timeout_counter+0x2>
-     6e8:	b0 91 d8 04 	lds	r27, 0x04D8	; 0x8004d8 <response_timeout_counter+0x3>
+     6dc:	80 91 dd 04 	lds	r24, 0x04DD	; 0x8004dd <response_timeout_counter>
+     6e0:	90 91 de 04 	lds	r25, 0x04DE	; 0x8004de <response_timeout_counter+0x1>
+     6e4:	a0 91 df 04 	lds	r26, 0x04DF	; 0x8004df <response_timeout_counter+0x2>
+     6e8:	b0 91 e0 04 	lds	r27, 0x04E0	; 0x8004e0 <response_timeout_counter+0x3>
      6ec:	01 96       	adiw	r24, 0x01	; 1
      6ee:	a1 1d       	adc	r26, r1
      6f0:	b1 1d       	adc	r27, r1
-     6f2:	80 93 d5 04 	sts	0x04D5, r24	; 0x8004d5 <response_timeout_counter>
-     6f6:	90 93 d6 04 	sts	0x04D6, r25	; 0x8004d6 <response_timeout_counter+0x1>
-     6fa:	a0 93 d7 04 	sts	0x04D7, r26	; 0x8004d7 <response_timeout_counter+0x2>
-     6fe:	b0 93 d8 04 	sts	0x04D8, r27	; 0x8004d8 <response_timeout_counter+0x3>
-     702:	40 91 d5 04 	lds	r20, 0x04D5	; 0x8004d5 <response_timeout_counter>
-     706:	50 91 d6 04 	lds	r21, 0x04D6	; 0x8004d6 <response_timeout_counter+0x1>
-     70a:	60 91 d7 04 	lds	r22, 0x04D7	; 0x8004d7 <response_timeout_counter+0x2>
-     70e:	70 91 d8 04 	lds	r23, 0x04D8	; 0x8004d8 <response_timeout_counter+0x3>
-     712:	80 91 d9 04 	lds	r24, 0x04D9	; 0x8004d9 <response_timeout>
-     716:	90 91 da 04 	lds	r25, 0x04DA	; 0x8004da <response_timeout+0x1>
-     71a:	a0 91 db 04 	lds	r26, 0x04DB	; 0x8004db <response_timeout+0x2>
-     71e:	b0 91 dc 04 	lds	r27, 0x04DC	; 0x8004dc <response_timeout+0x3>
+     6f2:	80 93 dd 04 	sts	0x04DD, r24	; 0x8004dd <response_timeout_counter>
+     6f6:	90 93 de 04 	sts	0x04DE, r25	; 0x8004de <response_timeout_counter+0x1>
+     6fa:	a0 93 df 04 	sts	0x04DF, r26	; 0x8004df <response_timeout_counter+0x2>
+     6fe:	b0 93 e0 04 	sts	0x04E0, r27	; 0x8004e0 <response_timeout_counter+0x3>
+     702:	40 91 dd 04 	lds	r20, 0x04DD	; 0x8004dd <response_timeout_counter>
+     706:	50 91 de 04 	lds	r21, 0x04DE	; 0x8004de <response_timeout_counter+0x1>
+     70a:	60 91 df 04 	lds	r22, 0x04DF	; 0x8004df <response_timeout_counter+0x2>
+     70e:	70 91 e0 04 	lds	r23, 0x04E0	; 0x8004e0 <response_timeout_counter+0x3>
+     712:	80 91 e1 04 	lds	r24, 0x04E1	; 0x8004e1 <response_timeout>
+     716:	90 91 e2 04 	lds	r25, 0x04E2	; 0x8004e2 <response_timeout+0x1>
+     71a:	a0 91 e3 04 	lds	r26, 0x04E3	; 0x8004e3 <response_timeout+0x2>
+     71e:	b0 91 e4 04 	lds	r27, 0x04E4	; 0x8004e4 <response_timeout+0x3>
      722:	48 17       	cp	r20, r24
      724:	59 07       	cpc	r21, r25
      726:	6a 07       	cpc	r22, r26
@@ -1183,7 +1183,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      74c:	81 81       	ldd	r24, Z+1	; 0x01
      74e:	8f 77       	andi	r24, 0x7F	; 127
      750:	81 83       	std	Z+1, r24	; 0x01
-     752:	65 ee       	ldi	r22, 0xE5	; 229
+     752:	6d ee       	ldi	r22, 0xED	; 237
      754:	74 e0       	ldi	r23, 0x04	; 4
      756:	88 ec       	ldi	r24, 0xC8	; 200
      758:	90 e0       	ldi	r25, 0x00	; 0
@@ -1205,10 +1205,10 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      774:	7c 01       	movw	r14, r24
      776:	8b 01       	movw	r16, r22
      778:	60 e8       	ldi	r22, 0x80	; 128
-     77a:	85 ee       	ldi	r24, 0xE5	; 229
+     77a:	8d ee       	ldi	r24, 0xED	; 237
      77c:	94 e0       	ldi	r25, 0x04	; 4
      77e:	fc dd       	rcall	.-1032   	; 0x378 <reset_char_array>
-     780:	10 92 dd 04 	sts	0x04DD, r1	; 0x8004dd <response_counter>
+     780:	10 92 e5 04 	sts	0x04E5, r1	; 0x8004e5 <response_counter>
      784:	10 16       	cp	r1, r16
      786:	11 06       	cpc	r1, r17
      788:	74 f4       	brge	.+28     	; 0x7a6 <tx_data_response+0x3e>
@@ -1241,7 +1241,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      7be:	89 81       	ldd	r24, Y+1	; 0x01
      7c0:	8f 77       	andi	r24, 0x7F	; 127
      7c2:	89 83       	std	Y+1, r24	; 0x01
-     7c4:	65 ee       	ldi	r22, 0xE5	; 229
+     7c4:	6d ee       	ldi	r22, 0xED	; 237
      7c6:	74 e0       	ldi	r23, 0x04	; 4
      7c8:	88 ec       	ldi	r24, 0xC8	; 200
      7ca:	90 e0       	ldi	r25, 0x00	; 0
@@ -1353,14 +1353,14 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      89e:	08 95       	ret
 
 000008a0 <at_rf_status>:
-     8a0:	80 e5       	ldi	r24, 0x50	; 80
+     8a0:	88 e5       	ldi	r24, 0x58	; 88
      8a2:	94 e0       	ldi	r25, 0x04	; 4
      8a4:	cc de       	rcall	.-616    	; 0x63e <tx_at_response>
      8a6:	80 e0       	ldi	r24, 0x00	; 0
      8a8:	08 95       	ret
 
 000008aa <at_rf_gprs>:
-     8aa:	87 e4       	ldi	r24, 0x47	; 71
+     8aa:	8f e4       	ldi	r24, 0x4F	; 79
      8ac:	94 e0       	ldi	r25, 0x04	; 4
      8ae:	c7 de       	rcall	.-626    	; 0x63e <tx_at_response>
      8b0:	80 e0       	ldi	r24, 0x00	; 0
@@ -1378,8 +1378,8 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      8c4:	68 94       	set
      8c6:	ee 24       	eor	r14, r14
      8c8:	e2 f8       	bld	r14, 2
-     8ca:	0f ef       	ldi	r16, 0xFF	; 255
-     8cc:	13 e0       	ldi	r17, 0x03	; 3
+     8ca:	07 e0       	ldi	r16, 0x07	; 7
+     8cc:	14 e0       	ldi	r17, 0x04	; 4
      8ce:	ff 24       	eor	r15, r15
      8d0:	f3 94       	inc	r15
      8d2:	0f 2e       	mov	r0, r31
@@ -1403,7 +1403,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      8f6:	09 f4       	brne	.+2      	; 0x8fa <at_rf_connect+0x46>
      8f8:	3a c0       	rjmp	.+116    	; 0x96e <__stack+0x6f>
      8fa:	f2 cf       	rjmp	.-28     	; 0x8e0 <at_rf_connect+0x2c>
-     8fc:	c5 ea       	ldi	r28, 0xA5	; 165
+     8fc:	cd ea       	ldi	r28, 0xAD	; 173
      8fe:	d3 e0       	ldi	r29, 0x03	; 3
      900:	ce 01       	movw	r24, r28
      902:	9d de       	rcall	.-710    	; 0x63e <tx_at_response>
@@ -1411,7 +1411,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      906:	0c 17       	cp	r16, r28
      908:	1d 07       	cpc	r17, r29
      90a:	d1 f7       	brne	.-12     	; 0x900 <__stack+0x1>
-     90c:	8e e3       	ldi	r24, 0x3E	; 62
+     90c:	86 e4       	ldi	r24, 0x46	; 70
      90e:	94 e0       	ldi	r25, 0x04	; 4
      910:	96 de       	rcall	.-724    	; 0x63e <tx_at_response>
      912:	81 11       	cpse	r24, r1
@@ -1419,7 +1419,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      916:	5a de       	rcall	.-844    	; 0x5cc <at_get_radio_network_time>
      918:	8f 2d       	mov	r24, r15
      91a:	e2 cf       	rjmp	.-60     	; 0x8e0 <at_rf_connect+0x2c>
-     91c:	81 e1       	ldi	r24, 0x11	; 17
+     91c:	89 e1       	ldi	r24, 0x19	; 25
      91e:	94 e0       	ldi	r25, 0x04	; 4
      920:	8e de       	rcall	.-740    	; 0x63e <tx_at_response>
      922:	88 23       	and	r24, r24
@@ -1428,24 +1428,24 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      928:	8a de       	rcall	.-748    	; 0x63e <tx_at_response>
      92a:	88 23       	and	r24, r24
      92c:	d1 f0       	breq	.+52     	; 0x962 <__stack+0x63>
-     92e:	88 e0       	ldi	r24, 0x08	; 8
+     92e:	80 e1       	ldi	r24, 0x10	; 16
      930:	94 e0       	ldi	r25, 0x04	; 4
      932:	85 de       	rcall	.-758    	; 0x63e <tx_at_response>
      934:	88 23       	and	r24, r24
      936:	b9 f0       	breq	.+46     	; 0x966 <__stack+0x67>
      938:	8c 2d       	mov	r24, r12
      93a:	d2 cf       	rjmp	.-92     	; 0x8e0 <at_rf_connect+0x2c>
-     93c:	83 e2       	ldi	r24, 0x23	; 35
+     93c:	8b e2       	ldi	r24, 0x2B	; 43
      93e:	94 e0       	ldi	r25, 0x04	; 4
      940:	7e de       	rcall	.-772    	; 0x63e <tx_at_response>
      942:	88 23       	and	r24, r24
      944:	91 f0       	breq	.+36     	; 0x96a <__stack+0x6b>
      946:	8f 2d       	mov	r24, r15
      948:	cb cf       	rjmp	.-106    	; 0x8e0 <at_rf_connect+0x2c>
-     94a:	8c e2       	ldi	r24, 0x2C	; 44
+     94a:	84 e3       	ldi	r24, 0x34	; 52
      94c:	94 e0       	ldi	r25, 0x04	; 4
      94e:	77 de       	rcall	.-786    	; 0x63e <tx_at_response>
-     950:	85 e3       	ldi	r24, 0x35	; 53
+     950:	8d e3       	ldi	r24, 0x3D	; 61
      952:	94 e0       	ldi	r25, 0x04	; 4
      954:	74 de       	rcall	.-792    	; 0x63e <tx_at_response>
      956:	8e 2d       	mov	r24, r14
@@ -1478,7 +1478,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      988:	df 93       	push	r29
      98a:	ec 01       	movw	r28, r24
      98c:	8b 01       	movw	r16, r22
-     98e:	8a e8       	ldi	r24, 0x8A	; 138
+     98e:	82 e9       	ldi	r24, 0x92	; 146
      990:	93 e0       	ldi	r25, 0x03	; 3
      992:	55 de       	rcall	.-854    	; 0x63e <tx_at_response>
      994:	81 30       	cpi	r24, 0x01	; 1
@@ -1486,13 +1486,13 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      998:	b8 01       	movw	r22, r16
      99a:	ce 01       	movw	r24, r28
      99c:	e5 de       	rcall	.-566    	; 0x768 <tx_data_response>
-     99e:	83 e9       	ldi	r24, 0x93	; 147
+     99e:	8b e9       	ldi	r24, 0x9B	; 155
      9a0:	93 e0       	ldi	r25, 0x03	; 3
      9a2:	4d de       	rcall	.-870    	; 0x63e <tx_at_response>
-     9a4:	8c e9       	ldi	r24, 0x9C	; 156
+     9a4:	84 ea       	ldi	r24, 0xA4	; 164
      9a6:	93 e0       	ldi	r25, 0x03	; 3
      9a8:	4a de       	rcall	.-876    	; 0x63e <tx_at_response>
-     9aa:	8f e6       	ldi	r24, 0x6F	; 111
+     9aa:	87 e7       	ldi	r24, 0x77	; 119
      9ac:	93 e0       	ldi	r25, 0x03	; 3
      9ae:	47 de       	rcall	.-882    	; 0x63e <tx_at_response>
      9b0:	80 e0       	ldi	r24, 0x00	; 0
@@ -1503,7 +1503,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      9ba:	08 95       	ret
 
 000009bc <at_rf_disconnect>:
-     9bc:	88 e7       	ldi	r24, 0x78	; 120
+     9bc:	80 e8       	ldi	r24, 0x80	; 128
      9be:	93 e0       	ldi	r25, 0x03	; 3
      9c0:	3e de       	rcall	.-900    	; 0x63e <tx_at_response>
      9c2:	80 e0       	ldi	r24, 0x00	; 0
@@ -1529,21 +1529,21 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
      9e6:	df 93       	push	r29
      9e8:	ef 93       	push	r30
      9ea:	ff 93       	push	r31
-     9ec:	c0 91 dd 04 	lds	r28, 0x04DD	; 0x8004dd <response_counter>
+     9ec:	c0 91 e5 04 	lds	r28, 0x04E5	; 0x8004e5 <response_counter>
      9f0:	d0 e0       	ldi	r29, 0x00	; 0
-     9f2:	cb 51       	subi	r28, 0x1B	; 27
+     9f2:	c3 51       	subi	r28, 0x13	; 19
      9f4:	db 4f       	sbci	r29, 0xFB	; 251
      9f6:	80 ec       	ldi	r24, 0xC0	; 192
      9f8:	90 e0       	ldi	r25, 0x00	; 0
      9fa:	88 db       	rcall	.-2288   	; 0x10c <usart_getchar>
      9fc:	88 83       	st	Y, r24
-     9fe:	80 91 dd 04 	lds	r24, 0x04DD	; 0x8004dd <response_counter>
+     9fe:	80 91 e5 04 	lds	r24, 0x04E5	; 0x8004e5 <response_counter>
      a02:	8f 5f       	subi	r24, 0xFF	; 255
-     a04:	80 93 dd 04 	sts	0x04DD, r24	; 0x8004dd <response_counter>
-     a08:	10 92 d5 04 	sts	0x04D5, r1	; 0x8004d5 <response_timeout_counter>
-     a0c:	10 92 d6 04 	sts	0x04D6, r1	; 0x8004d6 <response_timeout_counter+0x1>
-     a10:	10 92 d7 04 	sts	0x04D7, r1	; 0x8004d7 <response_timeout_counter+0x2>
-     a14:	10 92 d8 04 	sts	0x04D8, r1	; 0x8004d8 <response_timeout_counter+0x3>
+     a04:	80 93 e5 04 	sts	0x04E5, r24	; 0x8004e5 <response_counter>
+     a08:	10 92 dd 04 	sts	0x04DD, r1	; 0x8004dd <response_timeout_counter>
+     a0c:	10 92 de 04 	sts	0x04DE, r1	; 0x8004de <response_timeout_counter+0x1>
+     a10:	10 92 df 04 	sts	0x04DF, r1	; 0x8004df <response_timeout_counter+0x2>
+     a14:	10 92 e0 04 	sts	0x04E0, r1	; 0x8004e0 <response_timeout_counter+0x3>
      a18:	ff 91       	pop	r31
      a1a:	ef 91       	pop	r30
      a1c:	df 91       	pop	r29
@@ -1653,7 +1653,7 @@ ISR(WDT_vect)
 	
 	RTC_ISR_ACTIVE = 1;
      ad8:	81 e0       	ldi	r24, 0x01	; 1
-     ada:	80 93 d0 04 	sts	0x04D0, r24	; 0x8004d0 <RTC_ISR_ACTIVE>
+     ada:	80 93 d8 04 	sts	0x04D8, r24	; 0x8004d8 <RTC_ISR_ACTIVE>
 				controller_next_state = READ_EXT_DATA;
 				RTC_ISR_ACTIVE = 0; //FINISHED, break LOOP!
 				break;
@@ -1726,7 +1726,7 @@ ISR(WDT_vect)
 				if (at_rf_connect(0) != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
 				{
 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_CONNECT); //set failure status
-     b0e:	ca e6       	ldi	r28, 0x6A	; 106
+     b0e:	c2 e7       	ldi	r28, 0x72	; 114
      b10:	d5 e0       	ldi	r29, 0x05	; 5
 					
 // 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
@@ -1762,7 +1762,7 @@ ISR(WDT_vect)
 	{
 		
 		switch(controller_state) {
-     b26:	e0 91 e1 04 	lds	r30, 0x04E1	; 0x8004e1 <controller_state>
+     b26:	e0 91 e9 04 	lds	r30, 0x04E9	; 0x8004e9 <controller_state>
      b2a:	8e 2f       	mov	r24, r30
      b2c:	90 e0       	ldi	r25, 0x00	; 0
      b2e:	8c 30       	cpi	r24, 0x0C	; 12
@@ -1782,7 +1782,7 @@ ISR(WDT_vect)
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_on();
      b3e:	81 e0       	ldi	r24, 0x01	; 1
-     b40:	80 93 e0 04 	sts	0x04E0, r24	; 0x8004e0 <controller_next_state>
+     b40:	80 93 e8 04 	sts	0x04E8, r24	; 0x8004e8 <controller_next_state>
 				tx_data[POSITION_CURRENT] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
      b44:	ef c0       	rjmp	.+478    	; 0xd24 <__vector_8+0x2e6>
      b46:	50 dc       	rcall	.-1888   	; 0x3e8 <loadcell_power_on>
@@ -1829,19 +1829,19 @@ ISR(WDT_vect)
      b7e:	3b dc       	rcall	.-1930   	; 0x3f6 <loadcell_power_off>
      b80:	28 81       	ld	r18, Y
      b82:	39 81       	ldd	r19, Y+1	; 0x01
-     b84:	80 91 d1 04 	lds	r24, 0x04D1	; 0x8004d1 <accu_data>
-     b88:	90 91 d2 04 	lds	r25, 0x04D2	; 0x8004d2 <accu_data+0x1>
-     b8c:	a0 91 d3 04 	lds	r26, 0x04D3	; 0x8004d3 <accu_data+0x2>
-     b90:	b0 91 d4 04 	lds	r27, 0x04D4	; 0x8004d4 <accu_data+0x3>
+     b84:	80 91 d9 04 	lds	r24, 0x04D9	; 0x8004d9 <accu_data>
+     b88:	90 91 da 04 	lds	r25, 0x04DA	; 0x8004da <accu_data+0x1>
+     b8c:	a0 91 db 04 	lds	r26, 0x04DB	; 0x8004db <accu_data+0x2>
+     b90:	b0 91 dc 04 	lds	r27, 0x04DC	; 0x8004dc <accu_data+0x3>
      b94:	82 0f       	add	r24, r18
      b96:	93 1f       	adc	r25, r19
      b98:	a1 1d       	adc	r26, r1
      b9a:	b1 1d       	adc	r27, r1
-     b9c:	80 93 d1 04 	sts	0x04D1, r24	; 0x8004d1 <accu_data>
-     ba0:	90 93 d2 04 	sts	0x04D2, r25	; 0x8004d2 <accu_data+0x1>
+     b9c:	80 93 d9 04 	sts	0x04D9, r24	; 0x8004d9 <accu_data>
+     ba0:	90 93 da 04 	sts	0x04DA, r25	; 0x8004da <accu_data+0x1>
 				loadcell_min_max_tran(tx_data[POSITION_CURRENT], &tx_data); //check if new value should be stored in min, max and tran.
-     ba4:	a0 93 d3 04 	sts	0x04D3, r26	; 0x8004d3 <accu_data+0x2>
-     ba8:	b0 93 d4 04 	sts	0x04D4, r27	; 0x8004d4 <accu_data+0x3>
+     ba4:	a0 93 db 04 	sts	0x04DB, r26	; 0x8004db <accu_data+0x2>
+     ba8:	b0 93 dc 04 	sts	0x04DC, r27	; 0x8004dc <accu_data+0x3>
      bac:	88 81       	ld	r24, Y
 				tx_data[POSITION_PREV] = tx_data[POSITION_CURRENT]; //store adc value for next measurement.
      bae:	99 81       	ldd	r25, Y+1	; 0x01
@@ -1854,12 +1854,12 @@ ISR(WDT_vect)
      bb6:	99 81       	ldd	r25, Y+1	; 0x01
      bb8:	9b 83       	std	Y+3, r25	; 0x03
      bba:	8a 83       	std	Y+2, r24	; 0x02
-     bbc:	80 91 de 04 	lds	r24, 0x04DE	; 0x8004de <transmit_counter>
-     bc0:	90 91 df 04 	lds	r25, 0x04DF	; 0x8004df <transmit_counter+0x1>
+     bbc:	80 91 e6 04 	lds	r24, 0x04E6	; 0x8004e6 <transmit_counter>
+     bc0:	90 91 e7 04 	lds	r25, 0x04E7	; 0x8004e7 <transmit_counter+0x1>
      bc4:	01 96       	adiw	r24, 0x01	; 1
-     bc6:	90 93 df 04 	sts	0x04DF, r25	; 0x8004df <transmit_counter+0x1>
+     bc6:	90 93 e7 04 	sts	0x04E7, r25	; 0x8004e7 <transmit_counter+0x1>
 				tx_data[POSITION_TIME] = transmit_counter; //increase timestamp counter.
-     bca:	80 93 de 04 	sts	0x04DE, r24	; 0x8004de <transmit_counter>
+     bca:	80 93 e6 04 	sts	0x04E6, r24	; 0x8004e6 <transmit_counter>
 			
 				if (tx_data[POSITION_TIME] >= (TRANSMIT_RATE/WAKEUP_RATE)) //if accumulation limit is reached.
      bce:	9b 8b       	std	Y+19, r25	; 0x13
@@ -1871,22 +1871,22 @@ ISR(WDT_vect)
      bd6:	88 35       	cpi	r24, 0x58	; 88
      bd8:	92 40       	sbci	r25, 0x02	; 2
      bda:	38 f0       	brcs	.+14     	; 0xbea <__vector_8+0x1ac>
-     bdc:	10 92 df 04 	sts	0x04DF, r1	; 0x8004df <transmit_counter+0x1>
+     bdc:	10 92 e7 04 	sts	0x04E7, r1	; 0x8004e7 <transmit_counter+0x1>
 					controller_next_state = CALC; //limit reached, go to next
-     be0:	10 92 de 04 	sts	0x04DE, r1	; 0x8004de <transmit_counter>
+     be0:	10 92 e6 04 	sts	0x04E6, r1	; 0x8004e6 <transmit_counter>
 					} else {
 					controller_next_state = READ_EXT_DATA; //Start from top again
-     be4:	80 92 e0 04 	sts	0x04E0, r8	; 0x8004e0 <controller_next_state>
+     be4:	80 92 e8 04 	sts	0x04E8, r8	; 0x8004e8 <controller_next_state>
 					RTC_ISR_ACTIVE = 0; //Break loop and go to sleep again
      be8:	9d c0       	rjmp	.+314    	; 0xd24 <__vector_8+0x2e6>
-     bea:	10 92 e0 04 	sts	0x04E0, r1	; 0x8004e0 <controller_next_state>
+     bea:	10 92 e8 04 	sts	0x04E8, r1	; 0x8004e8 <controller_next_state>
 				}
 				break;
 			
 			case CALC:
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL////////////////////////////////////////////////////////////////////////
 				tx_data[POSITION_AVG] = controller_calc_avg(accu_data, tx_data[POSITION_TIME]); //calc and store average.
-     bee:	10 92 d0 04 	sts	0x04D0, r1	; 0x8004d0 <RTC_ISR_ACTIVE>
+     bee:	10 92 d8 04 	sts	0x04D8, r1	; 0x8004d8 <RTC_ISR_ACTIVE>
 
 
 uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
@@ -1898,27 +1898,27 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
      bf6:	3b 89       	ldd	r19, Y+19	; 0x13
      bf8:	40 e0       	ldi	r20, 0x00	; 0
      bfa:	50 e0       	ldi	r21, 0x00	; 0
-     bfc:	60 91 d1 04 	lds	r22, 0x04D1	; 0x8004d1 <accu_data>
-     c00:	70 91 d2 04 	lds	r23, 0x04D2	; 0x8004d2 <accu_data+0x1>
-     c04:	80 91 d3 04 	lds	r24, 0x04D3	; 0x8004d3 <accu_data+0x2>
+     bfc:	60 91 d9 04 	lds	r22, 0x04D9	; 0x8004d9 <accu_data>
+     c00:	70 91 da 04 	lds	r23, 0x04DA	; 0x8004da <accu_data+0x1>
+     c04:	80 91 db 04 	lds	r24, 0x04DB	; 0x8004db <accu_data+0x2>
 				}
 				break;
 			
 			case CALC:
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL////////////////////////////////////////////////////////////////////////
 				tx_data[POSITION_AVG] = controller_calc_avg(accu_data, tx_data[POSITION_TIME]); //calc and store average.
-     c08:	90 91 d4 04 	lds	r25, 0x04D4	; 0x8004d4 <accu_data+0x3>
+     c08:	90 91 dc 04 	lds	r25, 0x04DC	; 0x8004dc <accu_data+0x3>
 				accu_data = 0; //reset parameters
      c0c:	06 d6       	rcall	.+3084   	; 0x181a <__udivmodsi4>
      c0e:	3d 83       	std	Y+5, r19	; 0x05
      c10:	2c 83       	std	Y+4, r18	; 0x04
-     c12:	10 92 d1 04 	sts	0x04D1, r1	; 0x8004d1 <accu_data>
-     c16:	10 92 d2 04 	sts	0x04D2, r1	; 0x8004d2 <accu_data+0x1>
+     c12:	10 92 d9 04 	sts	0x04D9, r1	; 0x8004d9 <accu_data>
+     c16:	10 92 da 04 	sts	0x04DA, r1	; 0x8004da <accu_data+0x1>
 				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				controller_next_state = STORE_EXT_MEM;
-     c1a:	10 92 d3 04 	sts	0x04D3, r1	; 0x8004d3 <accu_data+0x2>
+     c1a:	10 92 db 04 	sts	0x04DB, r1	; 0x8004db <accu_data+0x2>
 				break;
-     c1e:	10 92 d4 04 	sts	0x04D4, r1	; 0x8004d4 <accu_data+0x3>
+     c1e:	10 92 dc 04 	sts	0x04DC, r1	; 0x8004dc <accu_data+0x3>
 			
 			case STORE_EXT_MEM:
 				tx_data[POSITION_TIME] = 0; //reset accumulation counter if something???????????????
@@ -1926,7 +1926,7 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 				controller_next_state = RF_POWER_ON;
      c22:	83 e0       	ldi	r24, 0x03	; 3
 				break;
-     c24:	80 93 e0 04 	sts	0x04E0, r24	; 0x8004e0 <controller_next_state>
+     c24:	80 93 e8 04 	sts	0x04E8, r24	; 0x8004e8 <controller_next_state>
 			
 			case RF_POWER_ON:
 				if (radio_power_on() == 1) //power on and check if it fails
@@ -1940,13 +1940,13 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
      c2a:	1b 8a       	std	Y+19, r1	; 0x13
      c2c:	1a 8a       	std	Y+18, r1	; 0x12
 				break;
-     c2e:	c0 92 e0 04 	sts	0x04E0, r12	; 0x8004e0 <controller_next_state>
+     c2e:	c0 92 e8 04 	sts	0x04E8, r12	; 0x8004e8 <controller_next_state>
 			
 			case RF_CONNECT: //NEED MORE POWER!!!!!!
 				if (at_rf_status() != 0)
      c32:	78 c0       	rjmp	.+240    	; 0xd24 <__vector_8+0x2e6>
      c34:	e2 db       	rcall	.-2108   	; 0x3fa <radio_power_on>
-     c36:	b0 92 e0 04 	sts	0x04E0, r11	; 0x8004e0 <controller_next_state>
+     c36:	b0 92 e8 04 	sts	0x04E8, r11	; 0x8004e8 <controller_next_state>
 				{
 					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
      c3a:	74 c0       	rjmp	.+232    	; 0xd24 <__vector_8+0x2e6>
@@ -1959,7 +1959,7 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
      c3e:	88 23       	and	r24, r24
      c40:	19 f0       	breq	.+6      	; 0xc48 <__vector_8+0x20a>
 				if (at_rf_connect(0) != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
-     c42:	10 93 e0 04 	sts	0x04E0, r17	; 0x8004e0 <controller_next_state>
+     c42:	10 93 e8 04 	sts	0x04E8, r17	; 0x8004e8 <controller_next_state>
      c46:	6e c0       	rjmp	.+220    	; 0xd24 <__vector_8+0x2e6>
      c48:	30 de       	rcall	.-928    	; 0x8aa <at_rf_gprs>
      c4a:	80 e0       	ldi	r24, 0x00	; 0
@@ -1978,18 +1978,18 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 				controller_next_state = GENERATE_PACKAGE;
      c5a:	88 a3       	std	Y+32, r24	; 0x20
 				break;
-     c5c:	10 93 e0 04 	sts	0x04E0, r17	; 0x8004e0 <controller_next_state>
+     c5c:	10 93 e8 04 	sts	0x04E8, r17	; 0x8004e8 <controller_next_state>
 			
 			case GENERATE_PACKAGE:
 				transfer_data_package_counter = 2;
      c60:	61 c0       	rjmp	.+194    	; 0xd24 <__vector_8+0x2e6>
-     c62:	70 92 e0 04 	sts	0x04E0, r7	; 0x8004e0 <controller_next_state>
+     c62:	70 92 e8 04 	sts	0x04E8, r7	; 0x8004e8 <controller_next_state>
      c66:	5e c0       	rjmp	.+188    	; 0xd24 <__vector_8+0x2e6>
 				while (transfer_data_package_counter < 8)
  				{
 					data_to_char(&tx_data[transfer_data_package_counter], 1, &tx_data_bytes, TRANSFER_DATA_BASE); //data to ascii
-     c68:	f0 92 68 04 	sts	0x0468, r15	; 0x800468 <__data_end>
-     c6c:	00 93 69 04 	sts	0x0469, r16	; 0x800469 <__data_end+0x1>
+     c68:	f0 92 70 04 	sts	0x0470, r15	; 0x800470 <__data_end>
+     c6c:	00 93 71 04 	sts	0x0471, r16	; 0x800471 <__data_end+0x1>
      c70:	8f 2d       	mov	r24, r15
      c72:	90 2f       	mov	r25, r16
      c74:	88 0f       	add	r24, r24
@@ -2002,49 +2002,49 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
     } else {
 	extern char *__itoa_ncheck (int, char *, unsigned char);
 	return __itoa_ncheck (__val, __s, __radix);
-     c7c:	45 e6       	ldi	r20, 0x65	; 101
+     c7c:	4d e6       	ldi	r20, 0x6D	; 109
      c7e:	55 e0       	ldi	r21, 0x05	; 5
      c80:	61 e0       	ldi	r22, 0x01	; 1
-     c82:	86 59       	subi	r24, 0x96	; 150
+     c82:	8e 58       	subi	r24, 0x8E	; 142
      c84:	9a 4f       	sbci	r25, 0xFA	; 250
      c86:	ab dd       	rcall	.-1194   	; 0x7de <data_to_char>
      c88:	41 2f       	mov	r20, r17
-     c8a:	62 ee       	ldi	r22, 0xE2	; 226
+     c8a:	6a ee       	ldi	r22, 0xEA	; 234
 					itoa(transfer_data_package_counter, mqtt_sub_topic, 10); //counter to text for sub-topic
 					transfer_data_length_package = mqtt_packet(&tx_data_bytes, &tx_data_package, TRANSFER_DATA_SIZE_PACKAGE, &mqtt_sub_topic); //convert ascii data to MQTT package.
      c8c:	74 e0       	ldi	r23, 0x04	; 4
-     c8e:	80 91 68 04 	lds	r24, 0x0468	; 0x800468 <__data_end>
-     c92:	90 91 69 04 	lds	r25, 0x0469	; 0x800469 <__data_end+0x1>
+     c8e:	80 91 70 04 	lds	r24, 0x0470	; 0x800470 <__data_end>
+     c92:	90 91 71 04 	lds	r25, 0x0471	; 0x800471 <__data_end+0x1>
      c96:	45 d6       	rcall	.+3210   	; 0x1922 <__itoa_ncheck>
-     c98:	22 ee       	ldi	r18, 0xE2	; 226
+     c98:	2a ee       	ldi	r18, 0xEA	; 234
      c9a:	34 e0       	ldi	r19, 0x04	; 4
      c9c:	44 e6       	ldi	r20, 0x64	; 100
      c9e:	50 e0       	ldi	r21, 0x00	; 0
-     ca0:	6c e6       	ldi	r22, 0x6C	; 108
+     ca0:	64 e7       	ldi	r22, 0x74	; 116
 								
 					if (transfer_data_package_counter > 2)
      ca2:	74 e0       	ldi	r23, 0x04	; 4
-     ca4:	85 e6       	ldi	r24, 0x65	; 101
+     ca4:	8d e6       	ldi	r24, 0x6D	; 109
      ca6:	95 e0       	ldi	r25, 0x05	; 5
      ca8:	91 d3       	rcall	.+1826   	; 0x13cc <mqtt_packet>
-     caa:	90 93 6b 04 	sts	0x046B, r25	; 0x80046b <transfer_data_length_package+0x1>
+     caa:	90 93 73 04 	sts	0x0473, r25	; 0x800473 <transfer_data_length_package+0x1>
 					{
 						//status for open new connection
 						at_rf_connect(1); //1	
-     cae:	80 93 6a 04 	sts	0x046A, r24	; 0x80046a <transfer_data_length_package>
-     cb2:	80 91 68 04 	lds	r24, 0x0468	; 0x800468 <__data_end>
+     cae:	80 93 72 04 	sts	0x0472, r24	; 0x800472 <transfer_data_length_package>
+     cb2:	80 91 70 04 	lds	r24, 0x0470	; 0x800470 <__data_end>
 					}
 					
 					tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
-     cb6:	90 91 69 04 	lds	r25, 0x0469	; 0x800469 <__data_end+0x1>
+     cb6:	90 91 71 04 	lds	r25, 0x0471	; 0x800471 <__data_end+0x1>
      cba:	03 97       	sbiw	r24, 0x03	; 3
      cbc:	14 f0       	brlt	.+4      	; 0xcc2 <__vector_8+0x284>
      cbe:	81 e0       	ldi	r24, 0x01	; 1
      cc0:	f9 dd       	rcall	.-1038   	; 0x8b4 <at_rf_connect>
-     cc2:	60 91 6a 04 	lds	r22, 0x046A	; 0x80046a <transfer_data_length_package>
+     cc2:	60 91 72 04 	lds	r22, 0x0472	; 0x800472 <transfer_data_length_package>
 					reset_char_array(&mqtt_sub_topic, 3);
-     cc6:	70 91 6b 04 	lds	r23, 0x046B	; 0x80046b <transfer_data_length_package+0x1>
-     cca:	8c e6       	ldi	r24, 0x6C	; 108
+     cc6:	70 91 73 04 	lds	r23, 0x0473	; 0x800473 <transfer_data_length_package+0x1>
+     cca:	84 e7       	ldi	r24, 0x74	; 116
 // 						itoa(transfer_data_length_package, package_lenght, 10);
 // 						strcpy(mystring, package_lenght);
 // 						usart_tx_at(USART_TERMINAL, mystring);
@@ -2054,17 +2054,17 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
      ccc:	94 e0       	ldi	r25, 0x04	; 4
      cce:	59 de       	rcall	.-846    	; 0x982 <tx>
      cd0:	63 e0       	ldi	r22, 0x03	; 3
-     cd2:	82 ee       	ldi	r24, 0xE2	; 226
+     cd2:	8a ee       	ldi	r24, 0xEA	; 234
      cd4:	94 e0       	ldi	r25, 0x04	; 4
      cd6:	50 db       	rcall	.-2400   	; 0x378 <reset_char_array>
-     cd8:	80 91 68 04 	lds	r24, 0x0468	; 0x800468 <__data_end>
+     cd8:	80 91 70 04 	lds	r24, 0x0470	; 0x800470 <__data_end>
 				controller_next_state = GENERATE_PACKAGE;
 				break;
 			
 			case GENERATE_PACKAGE:
 				transfer_data_package_counter = 2;
 				while (transfer_data_package_counter < 8)
-     cdc:	90 91 69 04 	lds	r25, 0x0469	; 0x800469 <__data_end+0x1>
+     cdc:	90 91 71 04 	lds	r25, 0x0471	; 0x800471 <__data_end+0x1>
      ce0:	01 96       	adiw	r24, 0x01	; 1
 					#endif // DEBUG
 
@@ -2072,9 +2072,9 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 					
 				}
 				controller_next_state = TX_DATA;
-     ce2:	90 93 69 04 	sts	0x0469, r25	; 0x800469 <__data_end+0x1>
+     ce2:	90 93 71 04 	sts	0x0471, r25	; 0x800471 <__data_end+0x1>
 				break;
-     ce6:	80 93 68 04 	sts	0x0468, r24	; 0x800468 <__data_end>
+     ce6:	80 93 70 04 	sts	0x0470, r24	; 0x800470 <__data_end>
 			
 			case TX_DATA:
 				controller_next_state = RX_DATA;
@@ -2087,7 +2087,7 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
      cee:	0c f4       	brge	.+2      	; 0xcf2 <__vector_8+0x2b4>
      cf0:	c1 cf       	rjmp	.-126    	; 0xc74 <__vector_8+0x236>
 				break;
-     cf2:	a0 92 e0 04 	sts	0x04E0, r10	; 0x8004e0 <controller_next_state>
+     cf2:	a0 92 e8 04 	sts	0x04E8, r10	; 0x8004e8 <controller_next_state>
 			
 			case RF_DISCONNECT:
  				if (at_rf_disconnect() != 0) //Status will not be transmitted, but could probably be stored for later.
@@ -2098,26 +2098,26 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 // 					break;
  				}
 				controller_next_state = RF_POWER_OFF;
-     cf8:	90 92 e0 04 	sts	0x04E0, r9	; 0x8004e0 <controller_next_state>
+     cf8:	90 92 e8 04 	sts	0x04E8, r9	; 0x8004e8 <controller_next_state>
 				break;
 			
 			case RF_POWER_OFF:
 				radio_power_off_at(); //radio power down
      cfc:	13 c0       	rjmp	.+38     	; 0xd24 <__vector_8+0x2e6>
 				controller_next_state = RESET_REGISTERS;
-     cfe:	e0 92 e0 04 	sts	0x04E0, r14	; 0x8004e0 <controller_next_state>
+     cfe:	e0 92 e8 04 	sts	0x04E8, r14	; 0x8004e8 <controller_next_state>
 				break;
      d02:	10 c0       	rjmp	.+32     	; 0xd24 <__vector_8+0x2e6>
 			
 			case RESET_REGISTERS:
 				reset_all_data(); //reset all arrays
      d04:	5b de       	rcall	.-842    	; 0x9bc <at_rf_disconnect>
-     d06:	10 93 e0 04 	sts	0x04E0, r17	; 0x8004e0 <controller_next_state>
+     d06:	10 93 e8 04 	sts	0x04E8, r17	; 0x8004e8 <controller_next_state>
 				controller_next_state = READ_EXT_DATA;
      d0a:	0c c0       	rjmp	.+24     	; 0xd24 <__vector_8+0x2e6>
 				RTC_ISR_ACTIVE = 0; //FINISHED, break LOOP!
      d0c:	ad db       	rcall	.-2214   	; 0x468 <radio_power_off_at>
-     d0e:	d0 92 e0 04 	sts	0x04E0, r13	; 0x8004e0 <controller_next_state>
+     d0e:	d0 92 e8 04 	sts	0x04E8, r13	; 0x8004e8 <controller_next_state>
 				break;
 			
 			default:
@@ -2128,8 +2128,8 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 		}
 		
 		controller_state = controller_next_state; //NEXT STATE => STATE
-     d16:	10 92 e0 04 	sts	0x04E0, r1	; 0x8004e0 <controller_next_state>
-     d1a:	10 92 d0 04 	sts	0x04D0, r1	; 0x8004d0 <RTC_ISR_ACTIVE>
+     d16:	10 92 e8 04 	sts	0x04E8, r1	; 0x8004e8 <controller_next_state>
+     d1a:	10 92 d8 04 	sts	0x04D8, r1	; 0x8004d8 <RTC_ISR_ACTIVE>
 	{
 		goto END;
 	} else {wdt_counter = 0;} //reset counter if limit is reached.
@@ -2137,18 +2137,18 @@ uint16_t controller_calc_avg(uint32_t data, uint16_t cnt) {
 	RTC_ISR_ACTIVE = 1;
 	while (RTC_ISR_ACTIVE == 1)
      d1e:	02 c0       	rjmp	.+4      	; 0xd24 <__vector_8+0x2e6>
-     d20:	d0 92 e0 04 	sts	0x04E0, r13	; 0x8004e0 <controller_next_state>
-     d24:	80 91 e0 04 	lds	r24, 0x04E0	; 0x8004e0 <controller_next_state>
+     d20:	d0 92 e8 04 	sts	0x04E8, r13	; 0x8004e8 <controller_next_state>
+     d24:	80 91 e8 04 	lds	r24, 0x04E8	; 0x8004e8 <controller_next_state>
 		
 	}
 
 	END:
 	
 	wdt_reset();
-     d28:	80 93 e1 04 	sts	0x04E1, r24	; 0x8004e1 <controller_state>
+     d28:	80 93 e9 04 	sts	0x04E9, r24	; 0x8004e9 <controller_state>
 	//wdt_enable();
 	rtc_init_period(1);
-     d2c:	80 91 d0 04 	lds	r24, 0x04D0	; 0x8004d0 <RTC_ISR_ACTIVE>
+     d2c:	80 91 d8 04 	lds	r24, 0x04D8	; 0x8004d8 <RTC_ISR_ACTIVE>
      d30:	81 30       	cpi	r24, 0x01	; 1
 	return;
 	
@@ -2434,7 +2434,7 @@ exit:
      f08:	86 81       	ldd	r24, Z+6	; 0x06
      f0a:	84 30       	cpi	r24, 0x04	; 4
      f0c:	51 f4       	brne	.+20     	; 0xf22 <MQTTSerialize_connect+0x6c>
-     f0e:	69 e5       	ldi	r22, 0x59	; 89
+     f0e:	61 e6       	ldi	r22, 0x61	; 97
      f10:	74 e0       	ldi	r23, 0x04	; 4
      f12:	ce 01       	movw	r24, r28
      f14:	01 96       	adiw	r24, 0x01	; 1
@@ -2444,7 +2444,7 @@ exit:
      f1c:	01 96       	adiw	r24, 0x01	; 1
      f1e:	f3 d0       	rcall	.+486    	; 0x1106 <writeChar>
      f20:	09 c0       	rjmp	.+18     	; 0xf34 <MQTTSerialize_connect+0x7e>
-     f22:	6e e5       	ldi	r22, 0x5E	; 94
+     f22:	66 e6       	ldi	r22, 0x66	; 102
      f24:	74 e0       	ldi	r23, 0x04	; 4
      f26:	ce 01       	movw	r24, r28
      f28:	01 96       	adiw	r24, 0x01	; 1
@@ -3257,7 +3257,7 @@ int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic)
 	int len = 0;
 	
 	data.clientID.cstring = "LE";
-    1438:	85 e6       	ldi	r24, 0x65	; 101
+    1438:	8d e6       	ldi	r24, 0x6D	; 109
     143a:	94 e0       	ldi	r25, 0x04	; 4
     143c:	99 87       	std	Y+9, r25	; 0x09
     143e:	88 87       	std	Y+8, r24	; 0x08
