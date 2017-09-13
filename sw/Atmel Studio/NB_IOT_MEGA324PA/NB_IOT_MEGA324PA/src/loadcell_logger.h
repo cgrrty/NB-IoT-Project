@@ -15,7 +15,7 @@
 #include "string.h"
 
 //sampling and averaging times
-#define SAMPLING_TIME 1
+#define SAMPLING_TIME 5
 #define AVERAGING_TIME 600
 
 //Data positions
@@ -30,6 +30,9 @@
 
 //Reset values that differs from initial setup
 #define RESET_VALUE_MIN 0xffff
+
+//ADC offset, gain and non-linear parameters.
+#define LOADCELL_OFFSET 1612 //Ideally it's 1V/vref * 2^n, which is 1600 @ vref=2,56 and 12 bits result.
 
 //DEFINITION OF FUNCTIONS
 uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array);

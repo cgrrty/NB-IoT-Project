@@ -167,6 +167,8 @@ char TEST_MESSAGE[24] = {0x10, 0x12, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0xc2, 0
 //Other commands
 //AT+CBC for supply voltage
 
+//#define AT_QMTOPEN "AT+QMTOPEN=0,\"10.18.0.39\",1883\r"
+#define AT_QMTOPEN "AT+QMTCFG=?\r"
 
 /*
 #define AT_QIREGAPP_INIT "AT+QICSGP="
@@ -229,7 +231,8 @@ const static m95_at_responses_t m95_at_responses[] = {
 
 const static m95_at_t m95_status[] = {
 	//SEQUENCE MUST MATCH TO VISIO, AND WHAT IS GIVEN FOR THE M95
-	{AT_QNSTATUS, AT_QNSTATUS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT_LONG} //repeat long due to long time to connect to network
+	{AT_QNSTATUS, AT_QNSTATUS_COMPARE, RESPONSE_TIME_300M, AT_REPEAT_LONG}, //repeat long due to long time to connect to network
+	{"AT+CGMR\r", RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT} //repeat long due to long time to connect to network
 };
 
 
@@ -284,6 +287,19 @@ static const m95_at_t m95_disconnect[] = {
 	//{AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT}
 };
 
+static const m95_at_t m95_mqtt_config[] = {
+	{AT_QICLOSE, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	{AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT} //OK TO HAVE THIS SHORT RESPONSE DUE TO POWER OFF AND NOT SLEEP!
+	//{AT_QIDEACT, RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT}
+};
 
+static const m95_at_t m95_mqtt_connect[] = {
+	{AT_QMTOPEN, RESPONSE_OK, RESPONSE_TIME_300M, AT_REPEAT},
+	//{"AT+QMTCFG=?\r", RESPONSE_OK, RESPONSE_TIME_20S, AT_REPEAT},
+	{"AT+QMTCONN=0,\"LE\",\"\",\"\"\r", "CONN: ", RESPONSE_TIME_20S, AT_REPEAT},
+	{"AT+QMTPUB=0,0,0,0,\"LE/2\"\r", AT_QISEND_COMPARE, RESPONSE_TIME_20S, AT_REPEAT},
+	{CTRL_Z, AT_CTRLZ_COMPARE, RESPONSE_TIME_300M, AT_REPEAT}
+	//{"AT+QMTDISC=0\r", "QMTDISC: ", RESPONSE_TIME_300M, AT_REPEAT}
+};
 
 #endif /* SIM900_AT_COMMANDS_H_ */

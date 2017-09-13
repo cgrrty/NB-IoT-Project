@@ -24,6 +24,8 @@
 	- HW data flow
 	*/
 
+//Define the CPU clock speed.
+#define F_CPU 1000000UL // Clock Speed
 
 /*
 Data shared between the ISR and your main program must be both volatile and global in scope in the C language. 
@@ -37,7 +39,7 @@ as the C language itself has no concept of different execution threads. Take the
 #define USART_TERMINAL			&USART1 //
 #define  USART_EXT_DATA			&USART1
 
-#define F_CPU 1000000UL //1843200 // Clock Speed
+
 #define BAUD 4800 //19200
 #define MYUBRR F_CPU/16/BAUD-1
 
@@ -179,7 +181,10 @@ uint8_t RTC_ISR_ACTIVE = 0;
 //////////////////////////////////////////////////////////////////////////
 
 //ADC definitions
+#define ADC_CLOCK_SPEED 200000UL //ADC clock speed
 #define ADC_NUM_AVG 9 //number of averages
+#define ADC_OFFSET 0 //CALIBRATION DATA.
+#define ADC_GAIN_ERROR 0 //CALIBRATION DATA.
 //////////////////////////////////////////////////////////////////////////
 
 //DEFINITIONS OF DATA FORMATS AND DATA SIZES TO BE TRANSMITTED THROUGH THE RADIO
@@ -361,38 +366,62 @@ void led_blink(uint16_t on_time) {
 
 static void adc_initialization(void)
 {
+	/*
+	CHECK F_CPU AND ADC CLOCK SPEED SETTINGS!!!!!!
+	The initial target is 1MHz CPU clock and <=200kHz ADC clock speed => div by >=5 => div by 8 => 125kHz ADC clock.
+	*/
 	PRR0 &= ~(1<<PRADC); //enable ADC clock
-	adc_init(ADC_PRESCALER_DIV128);
-	
+	adc_init(ADC_PRESCALER_DIV8);
 }
 
-uint16_t adc_result_average (uint8_t adc_ch, uint8_t num_avg) {
+uint16_t adc_10_to_12_bits (uint8_t adc_ch) {
 	
+	/*
+	From the specification the final resolution given today's system is 12,3 bits => assuming 12 bits.
+	The oversampling and decimation rates would then be 16 times oversampling/accumulation and 2 times right shift (divide by 4).
+	*/
 	uint8_t i = 0;
-	uint32_t res = 0;
-	uint16_t res_median[num_avg];
+	uint8_t num_oversample = 16;
+	uint16_t res = 0;
+	uint16_t res_accu[num_oversample];
+	uint8_t j = 0;
+	uint16_t res_avg = 0;
+	char mynum[5] = "";
 	
 	adc_initialization();
 	
-	while (i<num_avg)
+	//adc_read_10bit(adc_ch, ADC_VREF_2V56); //Throw away the first sample. No effect at the time it was tested.
+	
+	while (i<num_oversample) //Sample and accumulate
 	{
-		res_median[i] = adc_read_10bit(adc_ch, ADC_VREF_AVCC);
-		res = res + res_median[i];
-		
-// 		if (res_median[i] > 300)
-// 		{
-// 			led_blink(1000);
-// 		}
-		
+		res_avg = 0;
+		j=0;
+		while (j<4) //average of 4
+		{
+			res_avg = res_avg + adc_read_10bit(adc_ch, ADC_VREF_2V56); //Measure with 2,56V as reference
+			j++;
+		}
+		//res_accu[i] = adc_read_10bit(adc_ch, ADC_VREF_2V56); //Measure with 2,56V as reference
+		//res = res + res_accu[i];
+		res_avg = (res_avg >> 2); //Divide by 4.
+		res = res + res_avg;
+		#ifdef DEBUG
+// 			reset_char_array(mynum, 5);
+// 			itoa(res_accu[i], mynum, 10);
+// 			usart_tx_at(USART_TERMINAL, mynum);
+// 			usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+		#endif // DEBUG
 		i++;
-		
-		
 	}
 	
-	res = res/num_avg;
-	
-	
-	//return res_median[(num_avg-1)/2];
+	res = (res >> 2); //right shift
+		
+	#ifdef DEBUG
+		reset_char_array(mynum, 5);
+		itoa(res, mynum, 10);
+		usart_tx_at(USART_TERMINAL, mynum);
+		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+	#endif // DEBUG
 	return res;
 }
 
@@ -528,7 +557,7 @@ uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_a
 		if (TX_ASCII)
 		{
 			itoa(*(array_data+i), temp, base); //CONVERT NUMBER TO ASCII
-			} else {
+		} else {
 			temp[0] = (*(array_data+i) >> 8) & 0xff; //JUST GRAB THE BYTES
 			temp[1] = *(array_data+i) & 0xff;
 		}
@@ -576,6 +605,10 @@ uint8_t at_rf_status(void) {
 		if (tx_at_response(&m95_status[i]) == 1) {status = 0; goto END;}
 		i++;
 	}
+	
+	#ifdef DEBUG
+		//if (tx_at_response(&m95_status[1]) == 1) {status = 0; goto END;}
+	#endif // DEBUG
 		
 	END: 
 	
@@ -695,6 +728,68 @@ uint8_t tx(char *data, int len) {
 	END: return status;
 }
 
+uint8_t tx_mqtt(uint8_t state) {
+	/*
+	status = 0 => all AT commands was executed sucesessfully
+	status > 0 => one of the AT commands was not executed sucessfully.
+	*/
+	uint8_t status = 0;
+	uint8_t i = 0;
+	uint8_t active = 1;
+	
+	while (active == 1) {
+	switch(state) {
+	
+	case 0:
+	i = 0;
+	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+	while (i < 10)
+	{
+		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+		i++;
+	}
+	if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
+	state = 1;
+	break;
+	
+	//status for open new connection
+	case 1:
+	//qistat: ip
+	if (tx_at_response(&m95_connect[12]) == 0) {status = 0; state = 3; break;} //ip close
+	if (tx_at_response(&m95_connect[10]) == 0) {status = 0; state = 3; break;} //ip initial
+	if (tx_at_response(&m95_connect[11]) == 0) {status = 0; state = 3; break;} //ip status
+	
+	//if (tx_at_response(&m95_connect[13]) == 0) {status = 0; state = 3; break;} //already connect
+	state = 2;
+	break;
+	
+	case 2:
+	//qistat: connect ok.
+	if (tx_at_response(&m95_connect[14]) == 0) {status = 0; state = 4; break;} //connect ok 
+	state = 1;
+	break;
+	
+	case 3:
+	active = 0; //end of connection.
+	break;
+	}
+	}
+	
+	if (tx_at_response(&m95_mqtt_connect[0]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_mqtt_connect[1]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_mqtt_connect[2]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+	
+	tx_data_response(0x30, 1);
+			
+	#ifdef DEBUG
+		//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+	#endif // DEBUG
+	
+	if (tx_at_response(&m95_mqtt_connect[3]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+		
+	END: return status;
+}
+
 uint8_t at_rf_disconnect(void) {
 	/*
 	status = 0 => all AT commands was executed sucesessfully
@@ -741,10 +836,13 @@ ISR(WDT_vect)
 {
 	wdt_disable();
 	wdt_counter++; //watchdog set at 1 second timeout
-	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
-	usart_putchar(USART_TERMINAL, (0x30+wdt_counter)); //DEBUG
-	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
-
+	
+	#ifdef DEBUG
+// 		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+// 		usart_putchar(USART_TERMINAL, (0x30+wdt_counter)); //DEBUG
+// 		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG	
+	#endif // DEBUG
+	
 	if (wdt_counter < WAKEUP_RATE)
 	{
 		goto END;
@@ -763,7 +861,7 @@ ISR(WDT_vect)
 			case MEASURE:
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_on();
-				tx_data[POSITION_CURRENT] = adc_result_average(ADC_MUX_ADC0, ADC_NUM_AVG); //NEED TO FIX ADC CONVERSINS!!!!!!!!
+				tx_data[POSITION_CURRENT] = adc_10_to_12_bits(ADC_MUX_ADC0); //NEED TO FIX ADC CONVERSINS!!!!!!!!
 				//////////////////////////////////////////////////////////////////////////
 				
 				//GENERAL MEASUREMENTS
@@ -776,7 +874,7 @@ ISR(WDT_vect)
 // 				tx_data[POSITION_ANA5] = adc_result_average(ADC_MUX_ADC5, ADC_NUM_AVG); //
 // 				//tx_data[POSITION_TEMP] = adc_result_average(ADC_MUX_TEMPSENSE, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
  				//tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
-				 tx_data[POSITION_VDD] = ((1.05*1024)/(adc_result_average(ADC_MUX_1V1, 1)))*1000; //PIN CHANGE HAVE NO EFFECT ON ADCB
+				 tx_data[POSITION_VDD] = ((1.05*1024)/(adc_read_10bit(ADC_MUX_1V1, ADC_VREF_AVCC)))*1000; //PIN CHANGE HAVE NO EFFECT ON ADCB
 				 
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_off();
@@ -812,6 +910,15 @@ ISR(WDT_vect)
 			case STORE_EXT_MEM:
 				tx_data[POSITION_TIME] = 0; //reset accumulation counter if something???????????????
 				
+				#ifdef DEBUG
+					char myval[5] = "";
+					reset_char_array(myval, 5);
+					itoa(tx_data[POSITION_AVG], myval, 10);
+					usart_tx_at(USART_TERMINAL, RESPONSE_HEADER);
+					usart_tx_at(USART_TERMINAL, myval);
+					usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+				#endif // DEBUG
+								
 				controller_next_state = RF_POWER_ON;
 				break;
 			
@@ -833,7 +940,6 @@ ISR(WDT_vect)
 					break;
 				}
 				 
-				//usart_putchar(USART_TERMINAL, 0x40);
 				at_rf_gprs();
 				if (at_rf_connect(0) != 0) //Connect to network. MAKE STATUS REPORT FROM THIS!!!!!!!
 				{
@@ -854,12 +960,13 @@ ISR(WDT_vect)
 								
 					if (transfer_data_package_counter > 2)
 					{
-						//status for open new connection
-						at_rf_connect(1); //1	
+						at_rf_connect(1); ////status for open new connection
 					}
 					
 					tx(&tx_data_package, transfer_data_length_package); //transmit package. GENERATE STATUS FROM THIS.
 					reset_char_array(&mqtt_sub_topic, 3);
+					
+					//tx_mqtt(0); //transmit package. GENERATE STATUS FROM THIS.
 					
 					#ifdef DEBUG //output package size
 // 						char package_lenght[5] = "";
