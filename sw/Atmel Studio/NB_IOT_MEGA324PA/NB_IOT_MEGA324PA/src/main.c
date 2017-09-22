@@ -6,8 +6,8 @@
  */ 
 
 #include <avr/io.h>
-/**
- /*
+/*
+ 
  */
 //#include "main.h"
 /*
@@ -25,7 +25,7 @@
 	*/
 
 //Define the CPU clock speed.
-#define F_CPU 1000000UL // Clock Speed
+//#define F_CPU 1000000UL // Clock Speed
 
 /*
 Data shared between the ISR and your main program must be both volatile and global in scope in the C language. 
@@ -176,15 +176,18 @@ uint8_t RTC_ISR_ACTIVE = 0;
 //////////////////////////////////////////////////////////////////////////
 
 //DEFINITIONS OF PINS CONNECTED TO THE LOADCELL
-#define LOADCELL_PWR_PORT PORTD
-#define LOADCELL_PWR_PIN 6
+// #define LOADCELL_PWR_PORT PORTD
+// #define LOADCELL_PWR_PIN 6
+#define LOADCELL_PWR_PORT PORTA
+#define LOADCELL_PWR_PIN0 1
+#define LOADCELL_PWR_PIN1 2
 //////////////////////////////////////////////////////////////////////////
 
 //ADC definitions
 #define ADC_CLOCK_SPEED 200000UL //ADC clock speed
 #define ADC_NUM_AVG 9 //number of averages
-#define ADC_OFFSET 0 //CALIBRATION DATA.
-#define ADC_GAIN_ERROR 0 //CALIBRATION DATA.
+#define ADC_OFFSET 0 //CALIBRATION DATA. Measured to be 0 @ 0V on the current device. Should probably be measured at 0 load condition.
+#define ADC_GAIN_ERROR 0.98 //CALIBRATION DATA. Measured at loadcell 0 load condition (0,990V). ADC = vin/vref * 2^n, which is 1584 @ vref=2,56 and 12 bits result. Should probably be measured at full load condition.
 //////////////////////////////////////////////////////////////////////////
 
 //DEFINITIONS OF DATA FORMATS AND DATA SIZES TO BE TRANSMITTED THROUGH THE RADIO
@@ -197,10 +200,10 @@ uint8_t RTC_ISR_ACTIVE = 0;
 //char tx_data_bytes[TRANSFER_DATA_SIZE] = ""; //Final data to be transmitted (and stored?)
 //char tx_data_bytes[TX_DATA_SIZE][5]; //TX_DATA_SIZE amount of strings with length of 5 each.
 char tx_data_bytes[5]; //TX_DATA_SIZE amount of strings with length of 5 each.
-char tx_data_topics[6] = "ABCDE"; //TX_DATA_SIZE amount of strings with length of 5 each.
+//char tx_data_topics[6] = "ABCDE"; //TX_DATA_SIZE amount of strings with length of 5 each.
 #define TRANSFER_DATA_SIZE_PACKAGE (TRANSFER_DATA_SIZE) //ASSUMING 2 TIMES THE DATA SIZE IS THE TOTAL PACKAGE OVERHEAD.
 char tx_data_package[TRANSFER_DATA_SIZE_PACKAGE] = ""; //Final data package generated from the tx_data_bytes array.
-char test_data_package[33] = {0x10, 0x12, 0x00, 0x4, 0x4d, 0x51, 0x54, 0x54, 0x4, 0xc2, 0x00, 0x14, 0x00, 0x2, 0x4c, 0x45, 0x00, 0x00, 0x00, 0x00, 0x30, 0x09, 0x00, 0x4, 0x4c, 0x45, 0x2f, 0x30, 0x36, 0x37, 0x39, 0xe0, 0x00};
+//char test_data_package[33] = {0x10, 0x12, 0x00, 0x4, 0x4d, 0x51, 0x54, 0x54, 0x4, 0xc2, 0x00, 0x14, 0x00, 0x2, 0x4c, 0x45, 0x00, 0x00, 0x00, 0x00, 0x30, 0x09, 0x00, 0x4, 0x4c, 0x45, 0x2f, 0x30, 0x36, 0x37, 0x39, 0xe0, 0x00};
 int transfer_data_length_package = 0; //ACTUAL PACKAGE SIZE TO BE TRANSMITTED. CALCULATED IN PROGRAM. KEEP AS LOW AS POSSIBLE!!!!!!
 int transfer_data_package_counter = 0; //amount of packages transferred.
 ////////////////////////////////////////////////////////////////////////////////////
@@ -240,7 +243,6 @@ void reset_char_array(char *array_pointer , uint8_t size) {
 
 uint8_t reset_all_data() {
 	//reset data and date
-	
 	reset_char_array(&tx_data_bytes, TRANSFER_DATA_SIZE);
 	reset_char_array(&tx_data_package, TRANSFER_DATA_SIZE_PACKAGE);
 	reset_tx_data(&tx_data, &tx_data_reset_values, TX_DATA_SIZE); //why this one must be last to get correct reset values??????
@@ -252,15 +254,19 @@ void rtc_init_period(uint16_t period)
 	
 	MCUSR = 0x00; //RESET STATUS REGISTER
 	WDTCSR = (1<<WDCE) | (1<<WDE);
-	WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); //1 second wakeup
+	//WDTCSR = (1<<WDIE) | (1<<WDP2) | (1<<WDP1); //1 second wakeup
+	WDTCSR = (1<<WDIE) | (1<<WDP3); //4 second wakeup
 	//WDTCSR = (1<<WDIE) | (1<<WDP3) | (1<<WDP0); //8 second wakeup
 	
 	
 }
 
 void loadcell_pins_init(void) {
-	DDRD |= (1<<LOADCELL_PWR_PIN); //define power pin for external sensor. This must be a real switch in final application!!!!
-	LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN); //set to ground, i.e. power off.
+	//DDRD |= (1<<LOADCELL_PWR_PIN); //define power pin for external sensor. This must be a real switch in final application!!!!
+	DDRA |= (1<<LOADCELL_PWR_PIN0); //define power pin for external sensor. This must be a real switch in final application!!!!
+	//DDRA |= (1<<LOADCELL_PWR_PIN1); //define power pin for external sensor. This must be a real switch in final application!!!!
+	LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN0); //set to ground, i.e. power off.
+	//LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN1); //set to ground, i.e. power off.
 }
 
 void radio_pins_init(void) {
@@ -290,25 +296,29 @@ void my_delay_10ms(uint8_t loops)
 }
 
 uint8_t loadcell_power_on(void) {
-	LOADCELL_PWR_PORT |= (1<<LOADCELL_PWR_PIN);
-	delay_ms(10); //voltage to settle
+	LOADCELL_PWR_PORT |= (1<<LOADCELL_PWR_PIN0);
+	//LOADCELL_PWR_PORT |= (1<<LOADCELL_PWR_PIN1);
+	delay_ms(8); //Cap load = 1pF/cm assuming 20cm of wiring, and decoupling of 100uF. 10 in resistance. 12 bits voltage to settle requires 8 time constants. I.e. 8ms.
+	//resistors and caps in the amps etc is assumed to have resistances of <1M and caps in the nF range
+	//Startup times for the modules should be <1ms, but not verified.
 }
 
 uint8_t loadcell_power_off() {
-	LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN);
+	LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN0);
+	//LOADCELL_PWR_PORT &= ~(1<<LOADCELL_PWR_PIN1);
 }
 
 uint8_t radio_power_on(void) {
 	uint8_t status = 0;
 	uint8_t cnt_pwron = 0;
 	
-	PWRKEY_PORT &= ~(1<<PWRKEY_PIN); //reset
-	delay_ms(1); //wait for battery voltage to settle.
-	PWRKEY_PORT |= (1<<PWRKEY_PIN); //reset of radio
-	delay_ms(100); //boot time, 100ms recommended for m95
-	PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
+	PWRKEY_PORT &= ~(1<<PWRKEY_PIN); //normal state. PWRKEY pin is inverted compared to the one connected directly to the M95 due to the open collector driver of PWRKEY.
+	delay_ms(100); //wait for battery voltage to settle.
+	PWRKEY_PORT |= (1<<PWRKEY_PIN); //turn on
+	delay_s(1); //boot time, 800ms recommended for m95
+	PWRKEY_PORT &= ~(1<<PWRKEY_PIN); //normal state
 	delay_s(1);
-	PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
+	//PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
 	
 	//wait for status
 	while ( ((STATUS_PORT & (1<<STATUS_PIN)) == 0) & (cnt_pwron < AT_REPEAT_LONG) )
@@ -325,21 +335,52 @@ uint8_t radio_power_on(void) {
 	return status;
 }
 
+uint8_t radio_power_off(void) {
+	uint8_t status = 0;
+	uint8_t cnt_pwrdwn = 0;
+	
+	START:
+	PWRKEY_PORT &= ~(1<<PWRKEY_PIN); //normal state, inverted logic due to open collector driver of PWRKEY on M95
+	PWRKEY_PORT |= (1<<PWRKEY_PIN); //pull down on M95
+	my_delay_10ms(80); //between 0,7s and 1s. Too narrow for delay routine????
+	PWRKEY_PORT &= ~(1<<PWRKEY_PIN); //normal state, wait for status down.
+	
+	while (((STATUS_PORT & (1<<STATUS_PIN)) == 0x20)  & (cnt_pwrdwn < 12) )
+	{
+	 	delay_s(1);
+		cnt_pwrdwn++;
+	}
+		
+	if (cnt_pwrdwn == AT_REPEAT_LONG)
+	{
+		goto START;
+		status = 1;
+	}
+		
+	return status;
+}
+
+
 uint8_t radio_power_off_at(void) {
 	uint8_t status = 0;
 	uint8_t cnt_pwrdwn = 0;
 	
 	while (((STATUS_PORT & (1<<STATUS_PIN)) == 0x20)  & (cnt_pwrdwn < AT_REPEAT_LONG) )
 	{
-		usart_tx_at(USART_TERMINAL, AT_QPWD_1); //DEBUG
+		#ifdef DEBUG
+			usart_tx_at(USART_TERMINAL, AT_QPWD_1); //DEBUG
+		#endif // DEBUG
+		
 		usart_tx_at(USART_RADIO, AT_QPWD_1); //normal power off
-		PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
+		
 		delay_s(4);
 		if (((STATUS_PORT & (1<<STATUS_PIN)) == 0x20)) //if still on
 		{
-			usart_tx_at(USART_TERMINAL, AT_QPWD_0); //DEBUG
+			#ifdef DEBUG
+				usart_tx_at(USART_TERMINAL, AT_QPWD_0); //DEBUG
+			#endif // DEBUG
+			
 			usart_tx_at(USART_RADIO, AT_QPWD_0);
-			PWRKEY_PORT &= ~(1<<PWRKEY_PIN);
 			delay_s(6);
 		}
 		cnt_pwrdwn++;
@@ -357,10 +398,10 @@ uint8_t radio_power_off_at(void) {
 #ifdef DEBUG
 void led_blink(uint16_t on_time) {
 	
-// 	PORTB |= (1<<5);
-// 	delay_ms(on_time);
-// 	PORTB &= ~(1<<5);
-// 	delay_ms(on_time);
+	PORTB |= (1<<5);
+	delay_ms(on_time);
+	PORTB &= ~(1<<5);
+	delay_ms(on_time);
 }
 #endif // DEBUG
 
@@ -370,7 +411,7 @@ static void adc_initialization(void)
 	CHECK F_CPU AND ADC CLOCK SPEED SETTINGS!!!!!!
 	The initial target is 1MHz CPU clock and <=200kHz ADC clock speed => div by >=5 => div by 8 => 125kHz ADC clock.
 	*/
-	PRR0 &= ~(1<<PRADC); //enable ADC clock
+	//PRR0 &= ~(1<<PRADC); //enable ADC clock
 	adc_init(ADC_PRESCALER_DIV8);
 }
 
@@ -382,29 +423,31 @@ uint16_t adc_10_to_12_bits (uint8_t adc_ch) {
 	*/
 	uint8_t i = 0;
 	uint8_t num_oversample = 16;
-	uint16_t res = 0;
-	uint16_t res_accu[num_oversample];
+	volatile uint16_t res = 0;
+	//uint16_t res_accu[num_oversample];
 	uint8_t j = 0;
 	uint16_t res_avg = 0;
-	char mynum[5] = "";
 	
+	
+	signed int scale_factor = 16384; //2^14
+	signed int factor = scale_factor*ADC_GAIN_ERROR;
+	signed long correction = scale_factor*(0.5-(ADC_OFFSET*ADC_GAIN_ERROR));
+			
 	adc_initialization();
-	
-	//adc_read_10bit(adc_ch, ADC_VREF_2V56); //Throw away the first sample. No effect at the time it was tested.
-	
+		
 	while (i<num_oversample) //Sample and accumulate
 	{
 		res_avg = 0;
 		j=0;
-		while (j<4) //average of 4
+		while (j < 4) //average by 4
 		{
 			res_avg = res_avg + adc_read_10bit(adc_ch, ADC_VREF_2V56); //Measure with 2,56V as reference
 			j++;
 		}
-		//res_accu[i] = adc_read_10bit(adc_ch, ADC_VREF_2V56); //Measure with 2,56V as reference
-		//res = res + res_accu[i];
+		
 		res_avg = (res_avg >> 2); //Divide by 4.
-		res = res + res_avg;
+		res = res + res_avg; //accumulate
+		
 		#ifdef DEBUG
 // 			reset_char_array(mynum, 5);
 // 			itoa(res_accu[i], mynum, 10);
@@ -414,14 +457,18 @@ uint16_t adc_10_to_12_bits (uint8_t adc_ch) {
 		i++;
 	}
 	
-	res = (res >> 2); //right shift
+	res = (res >> 2); //decimate, right shift to get 12 bits results.
+	res = (((((signed long)res*factor)+correction)<<2)>>16); //apply offset and gain error
 		
 	#ifdef DEBUG
+		uint8_t mynum[5] = "";
 		reset_char_array(mynum, 5);
 		itoa(res, mynum, 10);
+		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
 		usart_tx_at(USART_TERMINAL, mynum);
 		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
 	#endif // DEBUG
+	
 	return res;
 }
 
@@ -511,8 +558,8 @@ uint8_t tx_at_response(const m95_at_t *opt) {
 uint8_t tx_data_response(char *data, int len) {
 	
 	uint8_t status = 0; //tx status, 0 = alles ok.
-	uint8_t tx_at_cnt = 0; //nr of AT command sent
-	char *ret; //response pointer
+	//uint8_t tx_at_cnt = 0; //nr of AT command sent
+	//char *ret; //response pointer
 	uint8_t i = 0;
 			
 	reset_char_array(&response, RESPONSE_SIZE); //reset response buffer
@@ -546,7 +593,7 @@ uint8_t tx_data_response(char *data, int len) {
 uint8_t data_to_char(uint16_t *array_data, uint8_t array_data_len, char *array_ascii, int base) {
 	uint8_t status = 0;
 	uint8_t i = 0; //REMOVE VOLATILE
-	uint8_t j = 0; //REMOVE VOLATILE
+	//uint8_t j = 0; //REMOVE VOLATILE
 	char temp[5] = ""; //MAX 4 VALUES + NULL TERMINATION
 	
 	//CONVERT ALL 2 BYTES NUMBERS
@@ -708,9 +755,9 @@ uint8_t tx(char *data, int len) {
 	status > 0 => one of the AT commands was not executed sucessfully.
 	*/
 	uint8_t status = 0;
-	uint8_t i = 0;
+	//uint8_t i = 0;
 	
-	START:
+	//START:
 	
 	//if (tx_at_response(&m95_tx[0]) == 1) {} //{status = 0; tx_at_response(&m95_reconnect[0]); tx_at_response(&m95_reconnect[1]); status = 0; goto START;} //SPECIFIED TO ELEMENT 0
 	if (tx_at_response(&m95_tx[1]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
@@ -728,67 +775,67 @@ uint8_t tx(char *data, int len) {
 	END: return status;
 }
 
-uint8_t tx_mqtt(uint8_t state) {
-	/*
-	status = 0 => all AT commands was executed sucesessfully
-	status > 0 => one of the AT commands was not executed sucessfully.
-	*/
-	uint8_t status = 0;
-	uint8_t i = 0;
-	uint8_t active = 1;
-	
-	while (active == 1) {
-	switch(state) {
-	
-	case 0:
-	i = 0;
-	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
-	while (i < 10)
-	{
-		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
-		i++;
-	}
-	if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
-	state = 1;
-	break;
-	
-	//status for open new connection
-	case 1:
-	//qistat: ip
-	if (tx_at_response(&m95_connect[12]) == 0) {status = 0; state = 3; break;} //ip close
-	if (tx_at_response(&m95_connect[10]) == 0) {status = 0; state = 3; break;} //ip initial
-	if (tx_at_response(&m95_connect[11]) == 0) {status = 0; state = 3; break;} //ip status
-	
-	//if (tx_at_response(&m95_connect[13]) == 0) {status = 0; state = 3; break;} //already connect
-	state = 2;
-	break;
-	
-	case 2:
-	//qistat: connect ok.
-	if (tx_at_response(&m95_connect[14]) == 0) {status = 0; state = 4; break;} //connect ok 
-	state = 1;
-	break;
-	
-	case 3:
-	active = 0; //end of connection.
-	break;
-	}
-	}
-	
-	if (tx_at_response(&m95_mqtt_connect[0]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_mqtt_connect[1]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_mqtt_connect[2]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
-	
-	tx_data_response(0x30, 1);
-			
-	#ifdef DEBUG
-		//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
-	#endif // DEBUG
-	
-	if (tx_at_response(&m95_mqtt_connect[3]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
-		
-	END: return status;
-}
+// uint8_t tx_mqtt(uint8_t state) {
+// 	/*
+// 	status = 0 => all AT commands was executed sucesessfully
+// 	status > 0 => one of the AT commands was not executed sucessfully.
+// 	*/
+// 	uint8_t status = 0;
+// 	uint8_t i = 0;
+// 	uint8_t active = 1;
+// 	
+// 	while (active == 1) {
+// 	switch(state) {
+// 	
+// 	case 0:
+// 	i = 0;
+// 	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
+// 	while (i < 10)
+// 	{
+// 		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+// 		i++;
+// 	}
+// 	if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
+// 	state = 1;
+// 	break;
+// 	
+// 	//status for open new connection
+// 	case 1:
+// 	//qistat: ip
+// 	if (tx_at_response(&m95_connect[12]) == 0) {status = 0; state = 3; break;} //ip close
+// 	if (tx_at_response(&m95_connect[10]) == 0) {status = 0; state = 3; break;} //ip initial
+// 	if (tx_at_response(&m95_connect[11]) == 0) {status = 0; state = 3; break;} //ip status
+// 	
+// 	//if (tx_at_response(&m95_connect[13]) == 0) {status = 0; state = 3; break;} //already connect
+// 	state = 2;
+// 	break;
+// 	
+// 	case 2:
+// 	//qistat: connect ok.
+// 	if (tx_at_response(&m95_connect[14]) == 0) {status = 0; state = 4; break;} //connect ok 
+// 	state = 1;
+// 	break;
+// 	
+// 	case 3:
+// 	active = 0; //end of connection.
+// 	break;
+// 	}
+// 	}
+// 	
+// 	if (tx_at_response(&m95_mqtt_connect[0]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+// 	if (tx_at_response(&m95_mqtt_connect[1]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+// 	if (tx_at_response(&m95_mqtt_connect[2]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+// 	
+// 	tx_data_response(0x30, 1);
+// 			
+// 	#ifdef DEBUG
+// 		//usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+// 	#endif // DEBUG
+// 	
+// 	if (tx_at_response(&m95_mqtt_connect[3]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+// 		
+// 	END: return status;
+// }
 
 uint8_t at_rf_disconnect(void) {
 	/*
@@ -798,7 +845,7 @@ uint8_t at_rf_disconnect(void) {
 	WILL MATCH FLOWCHART IN VISIO
 	*/
 	uint8_t status = 0;
-	uint8_t i = 0;
+	//uint8_t i = 0;
 // 	while (i < ((sizeof(m95_disconnect)/(sizeof(m95_disconnect[0])))))
 // 	{
 // 		if (tx_at_response(&m95_disconnect[i])) {goto END;}
@@ -823,6 +870,9 @@ jalla()
 	//sleep_disable();
 	wdt_disable();
 	wdt_counter++; //watchdog set at 1 second timeout
+	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+		usart_putchar(USART_TERMINAL, (0x30+wdt_counter)); //DEBUG
+		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG	
 	delay_s(2);
 	wdt_reset();
 	//rtc_init_period(2); //using RTC as sampler timer.
@@ -832,15 +882,16 @@ jalla()
 }
 
 //main_function()
+//ISR(TC0_vect) // 
 ISR(WDT_vect)
 {
 	wdt_disable();
 	wdt_counter++; //watchdog set at 1 second timeout
 	
 	#ifdef DEBUG
-// 		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
-// 		usart_putchar(USART_TERMINAL, (0x30+wdt_counter)); //DEBUG
-// 		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG	
+		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+		usart_putchar(USART_TERMINAL, (0x30+wdt_counter)); //DEBUG
+		usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG	
 	#endif // DEBUG
 	
 	if (wdt_counter < WAKEUP_RATE)
@@ -859,6 +910,8 @@ ISR(WDT_vect)
 				break;
 			
 			case MEASURE:
+				PRR0 &= ~(1<<PRADC); //enable adc clock
+				ADCSRA |= (1<<ADEN);
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_on();
 				tx_data[POSITION_CURRENT] = adc_10_to_12_bits(ADC_MUX_ADC0); //NEED TO FIX ADC CONVERSINS!!!!!!!!
@@ -875,6 +928,9 @@ ISR(WDT_vect)
 // 				//tx_data[POSITION_TEMP] = adc_result_average(ADC_MUX_TEMPSENSE, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
  				//tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
 				 tx_data[POSITION_VDD] = ((1.05*1024)/(adc_read_10bit(ADC_MUX_1V1, ADC_VREF_AVCC)))*1000; //PIN CHANGE HAVE NO EFFECT ON ADCB
+				
+				ADCSRA &= ~(1<<ADEN);
+				PRR0 |= (1<<PRADC); //disable ADC clock
 				 
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_off();
@@ -1036,103 +1092,63 @@ int main(void)
 	//disables interrupts
 	cli();
 	
-	//MOVE SOMEWHERE ELSE
-	//sysclk_set_prescalers(SYSCLK_PSDIV_4); //FUCK SHAIT!!!!!!!!!
-// 	CLKPR = (1<<CLKPCE);
-// 	CLKPR = (0<<CLKPS3) | (0<<CLKPS2) | (0<<CLKPS1) | (1<<CLKPS0);
-	
+	//sysclk_init();
+	PRR0 |= (1<<PRTWI) | (1<<PRTIM2) | (1<<PRTIM0) | (1<<PRTIM1) | (1<<PRSPI) | (1<<PRADC);
+// 	MCUCR = 0x60;
+// 	MCUCR = 0x40;
 		
-	/* Initialize the board.
-	 * The board-specific conf_board.h file contains the configuration of
-	 * the board initialization.
-	 */
-	board_init();
-	//pmic_init(); //XMEGA
-	//sysclk_init(); //disables all peripheral clocks //FIX!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	
-	
-	//select system clock
-	//CLK.CTRL = 0x01; //2M
-	
-	//ADC setup
-	adc_initialization();
-	
-			
-	
-	//////////////////////////////////////////////////////////////////////////
-	
-	
-	//////////////////////////////////////////////////////////////////////////
-	//Set Baud rate
-/*
-  UBRR0L = 12; //ubrr;
-  UBRR0H = 0; //(ubrr>>8);
-  
-   UCSR0C = 0
-    | (0<<UMSEL01) | (0<<UMSEL00)   // Asynchronous USART
-    | (0<<UPM01) | (0<<UPM00)       // Parity Disabled
-    | (0<<USBS0)                    // 1 stop bit
-    | (1<<UCSZ01) | (1<<UCSZ00)     // 8-bit character size
-    | (0<<0);                    // Rising TX, falling R;
-	
-	//Enable The receiver and transmitter
-	UCSR0B |= (1<<3);
-	*/
-	//////////////////////////////////////////////////////////////////////////
-	//unsigned char data = 0x40;
+	//USART
 	usart_init_rs232(USART_RADIO, &USART_OPTIONS); //Radio UART
-	sysclk_enable_module(POWER_RED_REG0, PRUSART0_bm);
+	//sysclk_enable_module(POWER_RED_REG0, PRUSART0_bm);
+	PRR0 &= ~(1<<PRUSART0);
 	
-	usart_init_rs232(USART_TERMINAL, &USART_OPTIONS); //Radio UART
-	sysclk_enable_module(POWER_RED_REG0, PRUSART1_bm);
-// 	
-// 	//initialize radio pins
- 	delay_s(1); //wait for voltages to settle
- 	radio_pins_init();
-	delay_s(1);
+	#ifdef DEBUG
+		usart_init_rs232(USART_TERMINAL, &USART_OPTIONS); //Radio UART
+		//sysclk_enable_module(POWER_RED_REG0, PRUSART1_bm);
+		PRR0 &= ~(1<<PRUSART1);
+		usart_putchar(USART_TERMINAL, 0x40);
+		usart_putchar(USART_TERMINAL, 0x41);
+	#endif // DEBUG
 	
 	//initialise loadcell pins
 	loadcell_pins_init();
-// 	
-// 	
+
+	//ADC setup
+	adc_initialization();
+
+ 	//initialize radio pins
+ 	delay_ms(100); //wait for voltages to settle
+ 	radio_pins_init();
+ 	delay_ms(100);
+
 	//Shut down radio, might be on
-	//if( (STATUS_PORT & (1<<STATUS_PIN)) == 0x80 ) //have a counter and reset if fail
-	radio_power_off_at(); //ENABLE AGIN!!!!
-	//radio_power_on();
-	
-	
-	
+	//FIND A SOLUTION THAT ALWAYS GUARANTEE POWER OFF OR POWER SLEEP, OR WHATEVER IS THE BEST OPTION.
+	if( (STATUS_PORT & (1<<STATUS_PIN)) == 0x20 ) //have a counter and reset if fail
+	{
+		START:
+		if(radio_power_off_at() == 1)
+		{
+			radio_power_off();
+		}
+		
+		if( (STATUS_PORT & (1<<STATUS_PIN)) == 0x20 ) //if it won't turn off try again...
+		{
+			goto START;
+		}
+	}
 	
 	//reset all tx data and date
 	reset_all_data(); //PROBLEM FIX!!!!!!!!!!!!!!!!!!!!!!
 	
-	//RTC setup.
-	//PR.PRGEN &= ~(1<<2); //enable the RTC clock
-	//sleepmgr_init();
-	//rtc_init_period(WAKEUP_RATE); //using RTC as sampler timer.
 	
-	//wdt_reset();
 	rtc_init_period(2); //using RTC as sampler timer.
-	
-	//wdt_enable(9);
-	
-	
+ 	//wdt_reset();
+ 	//wdt_enable(WDTO_4S);
+ 	
+	//Set sleep mode
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-	//sleep_enable();
 	//set_sleep_mode(SLEEP_MODE_PWR_SAVE);
-	//SMCR |= (1<<2);
 	
-// 	cli();
-// 	
-// 	sleep_enable();
-// 	sleep_bod_disable();
-// 	sei();
-// 	sleep_cpu();
-// 	sleep_disable();
-	
-// 	
-	
-		
 	sei(); //enable interrupts
 		
 	//go to sleep and let interrupts do the work...zzz....zzzz

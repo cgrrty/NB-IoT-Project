@@ -43,6 +43,20 @@ uint8_t at_response(USART_t *usart, uint16_t timeout, char *array_pointer);
 uint8_t usart_rx_at(USART_t *usart, uint16_t timeout, uint8_t *timeout_status);
 void usart_tx_at(USART_t *usart, uint8_t *cmd);
 uint8_t radio_power_on(void);
+uint8_t tx_data_response(char *data, int len);
+uint8_t tx(char *data, int len);
+uint8_t radio_power_off_at(void);
+uint8_t radio_power_off(void);
+void radio_pins_init(void);
+void my_delay_10ms(uint8_t loops);
+uint8_t loadcell_power_on(void);
+void loadcell_pins_init(void);
+void led_blink(uint16_t on_time);
+uint8_t at_rf_status(void);
+uint8_t at_rf_gprs(void);
+uint8_t at_rf_disconnect(void);
+uint8_t at_rf_connect(uint8_t state);
+uint16_t adc_10_to_12_bits (uint8_t adc_ch);
 
 //EXTERNAL SENSOR SETUP
 #include "loadcell_logger.h"

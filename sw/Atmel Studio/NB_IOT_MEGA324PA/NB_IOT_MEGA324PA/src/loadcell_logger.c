@@ -12,7 +12,7 @@ uint8_t loadcell_min_max_tran(uint16_t current_value, uint16_t *data_array) {
 	
 	//find tran
 	signed int tran = 0; //could go positive and negative, and could store a 15 bits number, hence enough for our 12 bits results.
-	uint16_t tran_abs = 0;
+	//uint16_t tran_abs = 0;
 	
 	tran = current_value - *(data_array + POSITION_PREV); //tran = current - previous
 	if ((abs(tran) > abs(*(data_array+POSITION_TRAN_MAX))) & (*(data_array+POSITION_ACCU_CNT) > 0)) //first step is not valid due to only one value.

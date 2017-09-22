@@ -13,7 +13,7 @@ int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic)
 	MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 	
 	//volatile int buflen = sizeof(&package);
-	char buf[256];
+	//char buf[256];
 	//buflen = sizeof(buf);
 	MQTTString topicString = MQTTString_initializer;
 	
@@ -40,7 +40,7 @@ int mqtt_packet(char *payload, char *package, int buflen, char *sub_topic)
 		
 	len += MQTTSerialize_disconnect((unsigned char *)(package + len), buflen - len);
 	
-	exit:
+	//exit:
 	
 	//return 0;
 	return len;
