@@ -62,7 +62,6 @@ typedef enum controller_states {
 	READ_EXT_DATA,
 	MEASURE,
 	CALC,
-	STORE_EXT_MEM,
 	RF_POWER_ON,
 	RF_CONNECT,
 	GENERATE_PACKAGE,
@@ -70,6 +69,7 @@ typedef enum controller_states {
 	RX_DATA,
 	RF_DISCONNECT,
 	RF_POWER_OFF,
+	STORE_EXT_MEM,
 	RESET_REGISTERS
 } controller_states_t;
 
@@ -88,9 +88,6 @@ Default settings are 5s wakeup rate and 600s (10 minutes) transfer rate.
 uint16_t wdt_counter = 1; //minimum at 1 second
 uint16_t transmit_counter = 0;
 //////////////////////////////////////////////////////////////////////////
-
-
-
 
 //DEFINE DATA POSITIONS
 #define POSITION_ANA0 POSITION_CURRENT //0
@@ -135,6 +132,9 @@ uint16_t transmit_counter = 0;
 #define STATUS_BIT_RF_POWER_ON 0
 #define STATUS_BIT_RF_CONNECT 1
 #define STATUS_BIT_TX 2
+#define STATUS_BIT_EEPROM_ADDR_OVF 3
+#define STATUS_BIT_EEPROM_TIME_OVF 4
+#define STATUS_BIT_RF_STATUS 5
 
 volatile uint16_t tx_data[TX_DATA_SIZE]; //declare the array for internal accumulation and storage.
 const static uint16_t tx_data_reset_values[TX_DATA_SIZE] = {RESET_VALUE_ANA0, RESET_VALUE_ANA1, RESET_VALUE_ANA2, RESET_VALUE_ANA3,
@@ -181,6 +181,19 @@ uint8_t RTC_ISR_ACTIVE = 0;
 #define LOADCELL_PWR_PORT PORTA
 #define LOADCELL_PWR_PIN0 1
 #define LOADCELL_PWR_PIN1 2
+//////////////////////////////////////////////////////////////////////////
+
+//DEFINITIONS OF PINS CONNECTED TO THE EXTERNAL EEPROM
+#define EXT_EEPROM_PORT PORTC
+#define EXT_EEPROM_PORT_DIR DDRC
+#define EXT_EEPROM_SDA 1
+#define EXT_EEPROM_SCL 0
+#define EXT_EEPROM_WP 6
+//volatile uint16_t ext_eeprom_address = 0; //start address
+volatile uint8_t ext_eeprom_address = 0; //start address REMEMBER TO FIX THE READ WRITE THAT CURRENTLY ONLY SUPPORT UP TO 256 ADDRESSES!!!!!!!!
+volatile uint8_t ext_eeprom_timestamp = 0;
+#define EXT_EEPROM_ADDR_MAX 255 //max address
+#define EXT_EEPROM_TIME_MAX 255 //max timestamp
 //////////////////////////////////////////////////////////////////////////
 
 //ADC definitions
@@ -248,6 +261,48 @@ uint8_t reset_all_data() {
 	reset_tx_data(&tx_data, &tx_data_reset_values, TX_DATA_SIZE); //why this one must be last to get correct reset values??????
 }
 
+uint8_t reset_ext_eeprom(uint8_t eeprom_size) {
+	uint8_t i = 0;
+	uint8_t j = 0;
+	usart_tx_at(USART_TERMINAL, RESPONSE_HEADER);	
+	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+	//EXT_EEPROM_PORT &= ~(1<<EXT_EEPROM_WP); //enable writing
+	while (i < eeprom_size)
+	{
+//		EEWriteByte(i, 0); //set all data to 0.
+		#ifdef DEBUG //read from memory
+					char myval[5] = "";
+					reset_char_array(myval, 5);
+					volatile uint8_t eeprom_data_lo = 0;
+					
+					eeprom_data_lo = EEReadByte(i);
+					
+					itoa(eeprom_data_lo, myval, 10);
+					
+					
+					usart_tx_at(USART_TERMINAL, myval);
+					
+					j++;				
+					if (j == 8)
+					{
+						usart_tx_at(USART_TERMINAL, RESPONSE_HEADER);	
+						usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+						j=0;
+					} else {
+						usart_putchar(USART_TERMINAL, 0x2c);
+					}
+				#endif // DEBUG
+		i++;
+		
+	}
+	//EXT_EEPROM_PORT |= (1<<EXT_EEPROM_WP);
+	
+	while (1)
+	{
+		//NOP, just for readout of EEPROM
+	}
+}
+
 void rtc_init_period(uint16_t period)
 {
 	//USE WDT ON MEGA
@@ -285,6 +340,16 @@ void radio_pins_init(void) {
 	
 }
 
+void eeprom_pins_init(void) {
+	EXT_EEPROM_PORT_DIR |= (1<<EXT_EEPROM_SDA);
+	EXT_EEPROM_PORT_DIR |= (1<<EXT_EEPROM_SCL);
+	EXT_EEPROM_PORT_DIR |= (1<<EXT_EEPROM_WP);
+	
+	EXT_EEPROM_PORT |= (1<<EXT_EEPROM_SDA); //set to default level
+	EXT_EEPROM_PORT |= (1<<EXT_EEPROM_SCL); //set to default level
+	EXT_EEPROM_PORT |= (1<<EXT_EEPROM_WP); //set to default level, write protected
+}
+
 void my_delay_10ms(uint8_t loops)
 {
   /* Prevents the use of floating point libraries. Delaying in groups of
@@ -317,7 +382,7 @@ uint8_t radio_power_on(void) {
 	PWRKEY_PORT |= (1<<PWRKEY_PIN); //turn on
 	delay_s(1); //boot time, 800ms recommended for m95
 	PWRKEY_PORT &= ~(1<<PWRKEY_PIN); //normal state
-	delay_s(1);
+	//delay_s(1);
 	//PWRKEY_PORT |= (1<<PWRKEY_PIN); //normal level for this pin
 	
 	//wait for status
@@ -649,7 +714,7 @@ uint8_t at_rf_status(void) {
 	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-0))
 	while (i < 1)
 	{
-		if (tx_at_response(&m95_status[i]) == 1) {status = 0; goto END;}
+		if (tx_at_response(&m95_status[i]) == 1) {status = 1; goto END;}
 		i++;
 	}
 	
@@ -709,7 +774,7 @@ uint8_t at_rf_connect(uint8_t state) {
 	//while (i < ((sizeof(m95_connect)/(sizeof(m95_connect[0])))-1))
 	while (i < 10)
 	{
-		if (tx_at_response(&m95_connect[i])) {/*goto END;*/}
+		if (tx_at_response(&m95_connect[i]) == 0) {}
 		i++;
 	}
 	if (tx_at_response(&m95_connect[17]) == 0) {at_get_radio_network_time();} //get network's time
@@ -734,7 +799,7 @@ uint8_t at_rf_connect(uint8_t state) {
 	break;
 	
 	case 3:
-	if (tx_at_response(&m95_connect[15]) == 0) {} //qiopen
+	if (tx_at_response(&m95_connect[15]) == 1) {status = 1; state = 4; break;} //qiopen
 	if (tx_at_response(&m95_connect[16]) == 0) {} //qisrvc
 	state = 4;
 	break;
@@ -760,7 +825,7 @@ uint8_t tx(char *data, int len) {
 	//START:
 	
 	//if (tx_at_response(&m95_tx[0]) == 1) {} //{status = 0; tx_at_response(&m95_reconnect[0]); tx_at_response(&m95_reconnect[1]); status = 0; goto START;} //SPECIFIED TO ELEMENT 0
-	if (tx_at_response(&m95_tx[1]) == 1) {status = 0; goto END;} //SPECIFIED TO ELEMENT 0
+	if (tx_at_response(&m95_tx[1]) == 0) {} //SPECIFIED TO ELEMENT 0
 
 	tx_data_response(data, len);
 			
@@ -857,6 +922,14 @@ uint8_t at_rf_disconnect(void) {
 	END: return status;
 }
 
+// ISR(TWI_vect)
+// {
+// 	//nop
+// 	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG
+// 	usart_putchar(USART_TERMINAL, (0x30)); //DEBUG
+// 	usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER); //DEBUG	
+// }
+
 ISR(USART0_RX_vect)
 {
 	*(response + response_counter) = usart_getchar(USART_RADIO);
@@ -882,7 +955,7 @@ jalla()
 }
 
 //main_function()
-//ISR(TC0_vect) // 
+//jalla() // 
 ISR(WDT_vect)
 {
 	wdt_disable();
@@ -911,7 +984,7 @@ ISR(WDT_vect)
 			
 			case MEASURE:
 				PRR0 &= ~(1<<PRADC); //enable adc clock
-				ADCSRA |= (1<<ADEN);
+				ADCSRA |= (1<<ADEN); //enable adc
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
 				loadcell_power_on();
 				tx_data[POSITION_CURRENT] = adc_10_to_12_bits(ADC_MUX_ADC0); //NEED TO FIX ADC CONVERSINS!!!!!!!!
@@ -929,7 +1002,7 @@ ISR(WDT_vect)
  				//tx_data[POSITION_VDD] = adc_result_average(ADC_MUX_1V1, 1); //PIN CHANGE HAVE NO EFFECT ON ADCB
 				 tx_data[POSITION_VDD] = ((1.05*1024)/(adc_read_10bit(ADC_MUX_1V1, ADC_VREF_AVCC)))*1000; //PIN CHANGE HAVE NO EFFECT ON ADCB
 				
-				ADCSRA &= ~(1<<ADEN);
+				ADCSRA &= ~(1<<ADEN); //disable adc
 				PRR0 |= (1<<PRADC); //disable ADC clock
 				 
 				//SPECIAL MEASUREMENTS REQUIRED BY THE LOADCELL///////////////////////////
@@ -945,7 +1018,7 @@ ISR(WDT_vect)
 				transmit_counter++;		
 				tx_data[POSITION_TIME] = transmit_counter; //increase timestamp counter.
 			
-				if (tx_data[POSITION_TIME] >= (TRANSMIT_RATE/WAKEUP_RATE)) //if accumulation limit is reached.
+				if (transmit_counter >= (TRANSMIT_RATE/WAKEUP_RATE)) //if accumulation limit is reached.
 				{
 					transmit_counter = 0; //reset counter
 					controller_next_state = CALC; //limit reached, go to next
@@ -960,21 +1033,6 @@ ISR(WDT_vect)
 				tx_data[POSITION_AVG] = controller_calc_avg(accu_data, tx_data[POSITION_TIME]); //calc and store average.
 				accu_data = 0; //reset parameters
 				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				controller_next_state = STORE_EXT_MEM;
-				break;
-			
-			case STORE_EXT_MEM:
-				tx_data[POSITION_TIME] = 0; //reset accumulation counter if something???????????????
-				
-				#ifdef DEBUG
-					char myval[5] = "";
-					reset_char_array(myval, 5);
-					itoa(tx_data[POSITION_AVG], myval, 10);
-					usart_tx_at(USART_TERMINAL, RESPONSE_HEADER);
-					usart_tx_at(USART_TERMINAL, myval);
-					usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
-				#endif // DEBUG
-								
 				controller_next_state = RF_POWER_ON;
 				break;
 			
@@ -982,16 +1040,17 @@ ISR(WDT_vect)
 				if (radio_power_on() == 1) //power on and check if it fails
  				{
 					
-// 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
-// 					controller_next_state = RF_POWER_OFF; //if failure go to power off
-// 					break;
+ 					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_POWER_ON); //set failure status
+ 					controller_next_state = RF_POWER_OFF; //if failure go to power off
+ 					break;
  				}
 				controller_next_state = RF_CONNECT;
 				break;
 			
 			case RF_CONNECT: //NEED MORE POWER!!!!!!
-				if (at_rf_status() != 0)
+				if (at_rf_status() == 1)
 				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_RF_STATUS); //set failure status
 					controller_next_state = RF_POWER_OFF; // RF_DISCONNECT; //if failure go to disconnect
 					break;
 				}
@@ -1008,7 +1067,7 @@ ISR(WDT_vect)
 			
 			case GENERATE_PACKAGE:
 				transfer_data_package_counter = 2;
-				while (transfer_data_package_counter < 8)
+				while (transfer_data_package_counter < 5)
  				{
 					data_to_char(&tx_data[transfer_data_package_counter], 1, &tx_data_bytes, TRANSFER_DATA_BASE); //data to ascii
 					itoa(transfer_data_package_counter, mqtt_sub_topic, 10); //counter to text for sub-topic
@@ -1058,9 +1117,77 @@ ISR(WDT_vect)
 			
 			case RF_POWER_OFF:
 				radio_power_off_at(); //radio power down
-				controller_next_state = RESET_REGISTERS;
+				controller_next_state = STORE_EXT_MEM;
 				break;
 			
+			case STORE_EXT_MEM:
+				tx_data[POSITION_TIME] = 0; //reset accumulation counter if something???????????????
+				
+				#ifdef DEBUG
+// 					char myval[5] = "";
+// 					reset_char_array(myval, 5);
+// 					itoa(tx_data[POSITION_AVG], myval, 10);
+// 					usart_tx_at(USART_TERMINAL, RESPONSE_HEADER);
+// 					usart_tx_at(USART_TERMINAL, myval);
+// 					usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+				#endif // DEBUG
+				
+				if (  (EXT_EEPROM_ADDR_MAX - ext_eeprom_address) < 16) //Address overflow
+				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_EEPROM_ADDR_OVF); //set failure status
+				}
+				
+				if ( (EXT_EEPROM_TIME_MAX - ext_eeprom_timestamp) < 16) //Timestamp overflow
+				{
+					tx_data[POSITION_STATUS] |= (1<<STATUS_BIT_EEPROM_TIME_OVF); //set failure status
+				}
+				//Write status to mem before resetting data
+				EXT_EEPROM_PORT &= ~(1<<EXT_EEPROM_WP); //ENABLE WRITING TO MEM
+				EEWriteByte(ext_eeprom_address, ext_eeprom_timestamp); //write timestamp
+				ext_eeprom_timestamp++; //increment timestamp by 1
+				ext_eeprom_address++; //increment address by 1.
+				EEWriteByte(ext_eeprom_address, tx_data[POSITION_STATUS]&0xff); //write status from previous phase. COULD BE PUT SOMEWHERE ELSE!!!!!!
+				ext_eeprom_address++; //increment address by 1.
+				EEWriteByte(ext_eeprom_address, (tx_data[POSITION_AVG]&0xff)); //write low byte of avg
+				ext_eeprom_address++; //increment address by 1.
+				EEWriteByte(ext_eeprom_address, ((tx_data[POSITION_AVG]>>8)&0xff)); //write high byte of avg
+				ext_eeprom_address++; //increment address by 1. SHOULD THE ADDRESS BE STORED SOMEWHERE??????????????????????
+				EEWriteByte(ext_eeprom_address, (tx_data[POSITION_MIN]&0xff)); //write low byte of avg
+				ext_eeprom_address++; //increment address by 1.
+				EEWriteByte(ext_eeprom_address, ((tx_data[POSITION_MIN]>>8)&0xff)); //write high byte of avg
+				ext_eeprom_address++; //increment address by 1. SHOULD THE ADDRESS BE STORED SOMEWHERE??????????????????????
+				EEWriteByte(ext_eeprom_address, (tx_data[POSITION_MAX]&0xff)); //write low byte of avg
+				ext_eeprom_address++; //increment address by 1.
+				EEWriteByte(ext_eeprom_address, ((tx_data[POSITION_MAX]>>8)&0xff)); //write high byte of avg
+				ext_eeprom_address++; //increment address by 1. SHOULD THE ADDRESS BE STORED SOMEWHERE??????????????????????
+				//WRITE A STATUS BIT IF OVERFLOW.
+				EXT_EEPROM_PORT |= (1<<EXT_EEPROM_WP); //DISABLE WRITING TO MEM
+				
+				
+				
+				#ifdef DEBUG //read from memory
+					char myval[5] = "";
+					reset_char_array(myval, 5);
+					volatile uint8_t eeprom_data_lo = 0;
+					volatile uint8_t eeprom_data_hi = 0;
+					volatile uint16_t eeprom_data_comb = 0;
+					
+					eeprom_data_lo = EEReadByte(ext_eeprom_address-6);
+					eeprom_data_hi = EEReadByte(ext_eeprom_address-5);
+ 					eeprom_data_comb = eeprom_data_hi<<8 | eeprom_data_lo;
+					itoa(eeprom_data_comb, myval, 10);
+					
+					usart_tx_at(USART_TERMINAL, RESPONSE_HEADER);
+					usart_tx_at(USART_TERMINAL, myval);
+					usart_tx_at(USART_TERMINAL, RESPONSE_FOOTER);
+					
+				#endif // DEBUG
+				
+				
+								
+				controller_next_state = RESET_REGISTERS;
+				break;
+				
 			case RESET_REGISTERS:
 				reset_all_data(); //reset all arrays
 				controller_next_state = READ_EXT_DATA;
@@ -1093,7 +1220,9 @@ int main(void)
 	cli();
 	
 	//sysclk_init();
-	PRR0 |= (1<<PRTWI) | (1<<PRTIM2) | (1<<PRTIM0) | (1<<PRTIM1) | (1<<PRSPI) | (1<<PRADC);
+	//PRR0 |= (1<<PRTWI) | (1<<PRTIM2) | (1<<PRTIM0) | (1<<PRTIM1) | (1<<PRSPI) | (1<<PRADC);
+	PRR0 |= (1<<PRTIM2) | (1<<PRTIM0) | (1<<PRTIM1) | (1<<PRSPI) | (1<<PRADC);
+	//MCUCR &= ~(1<<PUD);
 // 	MCUCR = 0x60;
 // 	MCUCR = 0x40;
 		
@@ -1115,7 +1244,14 @@ int main(void)
 
 	//ADC setup
 	adc_initialization();
-
+	
+	//EEPROM init
+	//Chip runs at 1MHz, EEPROM could support up to 400kHz. A prescaler of 1 gives ~35kHz clock speed.
+	eeprom_pins_init();
+	EEOpen();
+	//RESET REALLY NEEDED? COULD TAKE LONG TIME FOR LARGE MEMORIES
+	//reset_ext_eeprom(255); //2^n - 1.
+	
  	//initialize radio pins
  	delay_ms(100); //wait for voltages to settle
  	radio_pins_init();
@@ -1150,22 +1286,14 @@ int main(void)
 	//set_sleep_mode(SLEEP_MODE_PWR_SAVE);
 	
 	sei(); //enable interrupts
-		
+	
 	//go to sleep and let interrupts do the work...zzz....zzzz
 	while (1)
 	{
-//		sleep_mode();
  		sleep_enable();
  		sleep_bod_disable();
-		 //sei();
  		sleep_cpu();
  		sleep_disable(); 	
-		//sleep_cpu();
-		/*sleepmgr_enter_sleep();*/
-		//sleep_enable();
-// 		delay_s(1);
-// 		main_function();
-		
 	}
 		
 }

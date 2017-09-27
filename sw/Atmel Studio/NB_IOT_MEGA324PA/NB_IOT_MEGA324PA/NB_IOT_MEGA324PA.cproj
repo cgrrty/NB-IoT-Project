@@ -246,6 +246,12 @@
     <None Include="src\ASF\mega\drivers\cpu\mega_reset_cause.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\24c64.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\24c64.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\ASF\common\services\clock\mega\sysclk.c">
       <SubType>compile</SubType>
     </Compile>

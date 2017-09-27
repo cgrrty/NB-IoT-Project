@@ -2,6 +2,8 @@
 # Automatically-generated file. Do not edit or delete the file
 ################################################################################
 
+src\24c64.c
+
 src\ASF\common\services\clock\mega\sysclk.c
 
 src\ASF\mega\drivers\usart_mega.c

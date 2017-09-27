@@ -16,6 +16,8 @@
 #include "avr/wdt.h"
 #include "avr/sleep.h"
 
+#include "24c64.h"
+
 
 
 //USART

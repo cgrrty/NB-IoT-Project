@@ -37,7 +37,7 @@ src/main.d src/main.o: ../src/main.c \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sleep.h \
- ../src/ASF/mega/drivers/usart_mega.h ../src/quectel_m95.h \
+ ../src/24c64.h ../src/ASF/mega/drivers/usart_mega.h ../src/quectel_m95.h \
  ../src/user_network_params.h ../src/loadcell_logger.h \
  ../src/MQTT_functions.h ../src/MQTTPacket.h ../src/MQTTConnect.h \
  ../src/MQTTPublish.h ../src/MQTTSubscribe.h ../src/MQTTUnsubscribe.h \
@@ -130,6 +130,8 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\wdt.h:
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\sleep.h:
+
+../src/24c64.h:
 
 ../src/ASF/mega/drivers/usart_mega.h:
 
